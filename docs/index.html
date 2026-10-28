@@ -346,6 +346,7 @@ const I18N = {
     gateBtn: "Sign in", gateChecking: "Checking…", gateBad: "GitHub rejected this token. Check it and try again.",
     gateNoRepo: "The repository {repo} was not found with this token. Check the repository name and that the token includes it.",
     gateNoAccess: "This token has no write access to {repo}.", logout: "Sign out",
+    gateMissing: "The token is missing a permission: {perms}. Edit the token, add it and save, then sign in again.", gateEditToken: "Edit the token on GitHub",
     refreshKw: "Refresh rank", chartKw: "Rank history", del: "Remove", confirmDelete: "Remove this keyword?",
     emptyKw: "No keywords yet. Add some above or run a full check.",
     serpTitle: "Top 10 for “{k}”", app: "App",
@@ -410,6 +411,7 @@ const I18N = {
     gateBtn: "تسجيل الدخول", gateChecking: "جارٍ التحقق…", gateBad: "رفض GitHub هذا الرمز. تحقّق منه وحاول مجددًا.",
     gateNoRepo: "لم يُعثر على المستودع {repo} بهذا الرمز. تحقّق من اسم المستودع ومن أن الرمز يشمله.",
     gateNoAccess: "هذا الرمز لا يملك صلاحية الكتابة على {repo}.", logout: "تسجيل الخروج",
+    gateMissing: "ينقص الرمز إذنٌ: {perms}. عدّل الرمز وأضف الإذن ثم احفظه، وسجّل الدخول من جديد.", gateEditToken: "تعديل الرمز على GitHub",
     refreshKw: "تحديث الترتيب", chartKw: "سجل الترتيب", del: "حذف", confirmDelete: "هل تريد حذف هذه الكلمة المفتاحية؟",
     emptyKw: "لا توجد كلمات مفتاحية بعد. أضف بعضها في الأعلى أو شغّل فحصًا كاملًا.",
     serpTitle: "أفضل 10 نتائج لـ «{k}»", app: "التطبيق",
@@ -529,7 +531,14 @@ async function verifyLogin(token, repo) {
   if (r.status === 404 || r.status === 403) return t("gateNoRepo", {repo: esc(repo)});
   if (!r.ok) return `GitHub ${r.status}`;
   const d = await r.json();
-  return d.permissions?.push ? "" : t("gateNoAccess", {repo: esc(repo)});
+  if (!d.permissions?.push) return t("gateNoAccess", {repo: esc(repo)});
+  // permissions dyal token rasso (fine-grained): Contents o Actions
+  const h = {headers: {Authorization: `Bearer ${token}`, Accept: "application/vnd.github+json"}};
+  const missing = [];
+  if ((await fetch(`https://api.github.com/repos/${repo}/contents/config.json`, h)).status === 403) missing.push("Contents");
+  if ((await fetch(`https://api.github.com/repos/${repo}/actions/workflows`, h)).status === 403) missing.push("Actions");
+  return missing.length ? t("gateMissing", {perms: missing.map(m => `<b>${m}: Read and write</b>`).join(" + ")}) + " " +
+    `<a href="https://github.com/settings/personal-access-tokens" target="_blank" rel="noopener">${t("gateEditToken")}</a>` : "";
 }
 function showGate(err) {
   document.documentElement.classList.remove("authed");
@@ -1073,7 +1082,11 @@ $("#logout").onclick = () => {
 applyI18n();
 if (LOCAL) start();
 else if (!GH.token()) showGate();
-else verifyLogin(GH.token(), GH.repo()).then(err => err ? (store.set("aso_token", ""), showGate(err)) : start()).catch(e => showGate(esc(e.message)));
+else verifyLogin(GH.token(), GH.repo()).then(err => {
+  if (!err) return start();
+  showGate(err);
+  $("#gateToken").value = GH.token();  // ma nms7ohch: mli t9ad permissions, brek ghir Sign in
+}).catch(e => showGate(esc(e.message)));
 </script>
 </body>
 </html>
