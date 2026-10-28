@@ -204,6 +204,7 @@ code { font: 12px ui-monospace, Menlo, Consolas, monospace; direction: ltr; unic
         <button class="langEn" lang="en">EN</button>
         <button class="langAr" lang="ar">العربية</button>
       </div>
+      <button id="exportBtn" class="with-icon"><span aria-hidden="true">⬇</span><span data-i18n="exportShort"></span></button>
       <button id="runFull" class="primary" data-i18n="runFull"></button>
       <button id="logout" class="hidden" data-i18n="logout"></button>
     </div>
@@ -363,6 +364,21 @@ code { font: 12px ui-monospace, Menlo, Consolas, monospace; direction: ltr; unic
 
   <!-- SETTINGS -->
   <section id="tab-settings" class="hidden">
+    <div class="card" id="exportCard">
+      <h2 data-i18n="exportTitle"></h2>
+      <div class="muted" data-i18n="exportHelp"></div>
+      <div class="row" style="margin-top:4px">
+        <div style="max-width:260px"><label for="aiLang" data-i18n="aiLang"></label>
+          <select id="aiLang"><option value="darija">Darija (Moroccan)</option><option value="ar">العربية</option><option value="en">English</option><option value="fr">Français</option></select></div>
+      </div>
+      <div class="row-actions" style="margin-top:12px;flex-wrap:wrap">
+        <button class="primary" id="exAi" data-i18n="exAi"></button>
+        <button id="exCopy" data-i18n="exCopy"></button>
+        <button id="exCsv" data-i18n="exCsv"></button>
+        <button id="exJson" data-i18n="exJson"></button>
+      </div>
+      <div class="muted" id="exMsg" style="margin-top:8px"></div>
+    </div>
     <div class="card">
       <h2 data-i18n="tabSettings"></h2>
       <div class="row">
@@ -440,6 +456,10 @@ const I18N = {
     vHigh: "High", vMedium: "Medium", vLow: "Low", vNone: "None", vTarget: "Target",
     estNote: "Popularity, difficulty and value are estimates built from the top 10 apps for each keyword and their ratings, because Apple does not publish search volumes. Value combines popularity with your position: <b>High</b> means the keyword likely brings you installs, <b>Target</b> means you don't rank yet but it looks popular and beatable.",
     bringInstalls: "Bring installs (est.)", targets: "Targets",
+    exportShort: "Export", exportTitle: "Export data",
+    exportHelp: "Download your data to analyze it with an AI (ChatGPT, Claude, Gemini…) or in a spreadsheet. The AI report contains all the data, organized, with ready-made instructions at the top: paste it into the AI and it will analyze your keywords and give you an action plan.",
+    aiLang: "Language of the AI's answer", exAi: "AI report (.md)", exCopy: "Copy AI report", exCsv: "Keywords (.csv)", exJson: "All data (.json)",
+    exDone: "Downloaded: {name}", exCopied: "Copied. Paste it into your AI chat.", exCopyFail: "Copy is blocked in this browser. Use the download button instead.",
     bestKw: "Best keywords", newKw: "Keywords found recently", seeAll: "See all", noBest: "No keyword brings installs yet. They appear here once your game ranks well in popular keywords.",
     noNew: "No new keyword yet. The tracker searches every 2 hours.", estTitle: "What do popularity, difficulty and value mean?", howItWorks: "How it works",
     subVip: "⭐ Apple suggestions", subTested: "Tested keywords", subPool: "Snowball pool",
@@ -528,6 +548,10 @@ const I18N = {
     vHigh: "مرتفعة", vMedium: "متوسطة", vLow: "منخفضة", vNone: "لا شيء", vTarget: "فرصة",
     estNote: "الشعبية والصعوبة والقيمة تقديرات مبنية على أفضل 10 تطبيقات لكل كلمة مفتاحية وعدد تقييماتها، لأن Apple لا تنشر أحجام البحث. تجمع القيمة بين الشعبية وترتيبك: <b>مرتفعة</b> تعني أن الكلمة تجلب لك تثبيتات على الأرجح، و<b>فرصة</b> تعني أنك لا تظهر فيها بعد لكنها تبدو شائعة ويمكن المنافسة عليها.",
     bringInstalls: "تجلب تثبيتات (تقديريًا)", targets: "فرص",
+    exportShort: "تصدير", exportTitle: "تصدير البيانات",
+    exportHelp: "نزّل بياناتك لتحليلها بالذكاء الاصطناعي (ChatGPT أو Claude أو Gemini…) أو في جدول بيانات. يحتوي تقرير الذكاء الاصطناعي على كل البيانات مرتبة، مع تعليمات جاهزة في أوله: الصقه في محادثة الذكاء الاصطناعي ليحلل كلماتك المفتاحية ويعطيك خطة عمل.",
+    aiLang: "لغة رد الذكاء الاصطناعي", exAi: "تقرير للذكاء الاصطناعي (‎.md)", exCopy: "نسخ التقرير", exCsv: "الكلمات المفتاحية (‎.csv)", exJson: "كل البيانات (‎.json)",
+    exDone: "تم التنزيل: {name}", exCopied: "تم النسخ. الصقه في محادثة الذكاء الاصطناعي.", exCopyFail: "النسخ محظور في هذا المتصفح. استخدم زر التنزيل.",
     bestKw: "أفضل الكلمات المفتاحية", newKw: "كلمات عُثر عليها مؤخرًا", seeAll: "عرض الكل", noBest: "لا توجد بعد كلمة تجلب تثبيتات. ستظهر هنا عندما تحتل لعبتك ترتيبًا جيدًا في كلمات شائعة.",
     noNew: "لا توجد كلمات جديدة بعد. يبحث المتتبّع كل ساعتين.", estTitle: "ماذا تعني الشعبية والصعوبة والقيمة؟", howItWorks: "كيف يعمل",
     subVip: "⭐ اقتراحات Apple", subTested: "الكلمات المختبرة", subPool: "مخزون كرة الثلج",
@@ -1081,6 +1105,114 @@ async function loadAll() {
   renderStatus(S.status);
 }
 
+// ---------------------------------------------------------------- export (AI report / CSV / JSON)
+function download(name, text, type) {
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(new Blob([text], {type}));
+  a.download = name;
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+  $("#exMsg").textContent = t("exDone", {name});
+}
+const fileBase = () => `aso-${(S.config.app_id || "app")}-${new Date().toISOString().slice(0, 10)}`;
+const mdCell = v => String(v ?? "").replace(/\|/g, "/").replace(/\n/g, " ");
+const mdTable = (head, rows) => rows.length ? `| ${head.join(" | ")} |\n|${head.map(() => "---").join("|")}|\n` + rows.map(r => `| ${r.map(mdCell).join(" | ")} |`).join("\n") + "\n" : "_(none)_\n";
+const hist = k => (k.history || []).slice(-14).map(p => p.rank ?? "-").join(",");
+const AI_LANG = {darija: "Moroccan Darija written in Latin letters (like: \"had keyword mzyan\")", ar: "Modern Standard Arabic", en: "English", fr: "French"};
+
+async function allAnalysis() {
+  const out = {};
+  for (const cc of S.config.countries) out[cc] = await api("/api/analysis?country=" + cc);
+  return out;
+}
+
+async function buildAiReport() {
+  const cc0 = S.config.countries.find(c => S.info[c]) || S.config.countries[0], info = S.info[cc0] || {};
+  const an = await allAnalysis();
+  const lang = AI_LANG[$("#aiLang").value] || "English";
+  let md = `# ASO data export: ${info.name || S.config.app_id}\n\nExported ${new Date().toISOString().slice(0, 16).replace("T", " ")} UTC. Last full check: ${S.last_run_at || "-"}.\n\n`;
+  md += `## Instructions for the AI\n\nYou are an expert in App Store Optimization (ASO) for iOS games. Analyze the data below about my game and reply in ${lang}.\n\nPlease give me:\n`;
+  md += `1. A short summary: where the game ranks today, in which countries and keywords it is strong or weak.\n`;
+  md += `2. The best keywords to keep and strengthen (high value, VIP, good rank).\n`;
+  md += `3. Quick wins: keywords marked Target or VIP where the game does not rank yet but could, and why.\n`;
+  md += `4. A concrete proposal for each important country (US first): title (30 characters), subtitle (30 characters) and App Store Connect keyword field (100 characters, comma-separated, no spaces, no words already in title/subtitle, no trademarks such as NBA or other apps' names).\n`;
+  md += `5. What the main competitors do better (words they use, ratings) and how to compete.\n`;
+  md += `6. Problems you notice in my metadata (for example reversed Arabic text, missing localizations) and a prioritized action plan for the next 2 weeks.\n\n`;
+  md += `How to read the data: rank = position of my game in App Store search for that keyword (1 is best; "> N" means not in the first N results). Popularity, difficulty (0–100) and value are estimates from the top 10 apps and their ratings, because Apple does not publish search volumes. VIP = the keyword is an App Store autocomplete suggestion, so many people really search it; its score (0–100) is higher when it appears for a shorter search. History = my rank on the last days, oldest first ("-" = not found).\n\n`;
+
+  md += `## App\n\n`;
+  md += `- Name: ${info.name || "-"}\n- Subtitle: ${info.subtitle || "-"}\n- Developer: ${info.seller || "-"}\n- Categories: ${[...new Set(info.genres || [])].join(", ")}\n- Version: ${info.version || "-"} (updated ${(info.updated || "").slice(0, 10)}, released ${(info.released || "").slice(0, 10)})\n- Languages in the app: ${(info.languages || []).join(", ")}\n- My App Store Connect keywords: ${S.config.my_keywords || "(not filled in)"}\n- Countries tracked: ${S.config.countries.join(", ")}\n\n`;
+  md += mdTable(["Country", "Rating", "Ratings", "Name in this store"], S.config.countries.map(c => {
+    const x = S.info[c] || {};
+    const loc = Object.entries(x.localized || {}).map(([l, v]) => `${l}: ${v.name}`).join("; ");
+    return [c.toUpperCase(), x.rating ? x.rating.toFixed(2) : "-", x.ratings ?? 0, [x.name, loc].filter(Boolean).join(" | ")];
+  }));
+  md += `\n### Description (${cc0.toUpperCase()})\n\n${(info.description || "").slice(0, 3000)}\n\n`;
+
+  const ranked = KW.filter(k => k.rank), notRanked = KW.filter(k => !k.rank);
+  md += `## Summary\n\n- Keywords tracked: ${KW.length}\n- Ranking: ${ranked.length} (top 10: ${ranked.filter(k => k.rank <= 10).length}, top 3: ${ranked.filter(k => k.rank <= 3).length})\n- Bring installs (High/Medium): ${KW.filter(k => ["high", "medium"].includes(k.value_label)).length}\n- Targets: ${KW.filter(k => k.value_label === "target").length}\n- Found automatically: ${KW.filter(k => k.source === "auto").length}\n\n`;
+
+  md += `## Keywords where my game ranks\n\n`;
+  for (const c of S.config.countries) {
+    const rows = ranked.filter(k => k.country === c).sort((a, b) => a.rank - b.rank)
+      .map(k => [k.term, k.rank, k.prev ?? "-", k.best ?? "-", k.pop ?? "-", k.diff ?? "-", k.value_label || "-", k.vip ? `yes (${k.vip})` : "", hist(k)]);
+    if (rows.length) md += `### ${c.toUpperCase()}\n\n` + mdTable(["Keyword", "Rank", "Prev", "Best", "Popularity", "Difficulty", "Value", "VIP", "History"], rows) + "\n";
+  }
+  md += `## Tracked keywords where my game does not rank (most popular first)\n\n`;
+  md += mdTable(["Country", "Keyword", "Checked depth", "Popularity", "Difficulty", "Value", "VIP"],
+    notRanked.sort((a, b) => (b.pop || 0) - (a.pop || 0)).slice(0, 150).map(k => [k.country.toUpperCase(), k.term, k.depth ? `> ${k.depth}` : "-", k.pop ?? "-", k.diff ?? "-", k.value_label || "-", k.vip ? `yes (${k.vip})` : ""])) + "\n";
+
+  md += `## App Store search suggestions (VIP), best score first\n\n`;
+  for (const c of S.config.countries) {
+    const items = ((VS || {})[c] || {items: []}).items.slice(0, 120);
+    if (items.length) md += `### ${c.toUpperCase()}\n\n` + mdTable(["Suggestion", "Score", "My rank", "Found by typing"],
+      items.map(x => [x.term, x.score, x.rank ? `#${x.rank}` : x.tested_at ? "not ranking" : "not tested yet", x.query])) + "\n";
+  }
+
+  md += `## Main competitors\n\n`;
+  for (const c of S.config.countries) {
+    const comps = ((CO || {})[c] || []).slice(0, 10);
+    if (comps.length) md += `### ${c.toUpperCase()}\n\n` + mdTable(["App", "Ratings", "In my keywords", "Avg position", "Their keywords (my rank)"],
+      comps.map(a => [a.name, a.ratings ?? "-", a.appearances, a.avg_pos, a.terms.slice(0, 15).map(x => x.term + (x.rank ? ` (#${x.rank})` : "")).join(", ")])) + "\n";
+  }
+
+  md += `## Words competitors use that are missing from my metadata\n\n`;
+  for (const c of S.config.countries) {
+    const words = ((an[c] || {}).words || []).filter(w => !w.in_title && !w.in_keywords && !w.trademark).slice(0, 25);
+    if (words.length) md += `- ${c.toUpperCase()}: ${words.map(w => `${w.word} (${w.count})`).join(", ")}\n`;
+  }
+
+  const latest = {};
+  S.charts.forEach(ch => { latest[ch.country + "|" + ch.genre] = ch; });
+  md += `\n## Top charts (Top Free, top 100)\n\n` + mdTable(["Country", "Category", "Rank"], Object.values(latest).map(ch => [ch.country.toUpperCase(), S.genre_names[ch.genre] || ch.genre, ch.rank ? `#${ch.rank}` : "not in top 100"]));
+  return md;
+}
+
+function buildCsv() {
+  const head = ["country", "keyword", "source", "vip_score", "rank", "previous_rank", "best_rank", "checked_depth", "popularity_est", "difficulty_est", "value", "value_score", "last_checked", "added", "history_last_30"];
+  const q = v => { const x = String(v ?? ""); return /[",\n]/.test(x) ? `"${x.replace(/"/g, '""')}"` : x; };
+  const rows = KW.map(k => [k.country, k.term, k.source, k.vip ?? "", k.rank ?? "", k.prev ?? "", k.best ?? "", k.depth ?? "", k.pop ?? "", k.diff ?? "", k.value_label ?? "", k.value ?? "",
+    k.checked ?? "", k.added_at ?? "", (k.history || []).slice(-30).map(p => `${p.date}:${p.rank ?? "-"}`).join(" ")]);
+  return "\ufeff" + [head, ...rows].map(r => r.map(q).join(",")).join("\n");
+}
+
+function initExport() {
+  $("#exportBtn").onclick = () => { goTab("settings"); setTimeout(() => $("#exportCard").scrollIntoView({behavior: "smooth"}), 50); };
+  $("#exAi").onclick = act(async () => download(fileBase() + "-ai-report.md", await buildAiReport(), "text/markdown;charset=utf-8"));
+  $("#exCopy").onclick = act(async () => {
+    const text = await buildAiReport();
+    try { await navigator.clipboard.writeText(text); $("#exMsg").textContent = t("exCopied"); }
+    catch { $("#exMsg").textContent = t("exCopyFail"); }
+  });
+  $("#exCsv").onclick = () => download(fileBase() + "-keywords.csv", buildCsv(), "text/csv;charset=utf-8");
+  $("#exJson").onclick = act(async () => {
+    const data = {exported_at: new Date().toISOString(), state: S, keywords: KW, candidates: CD, competitors: CO, pool: PO, suggestions: VS, analysis: await allAnalysis()};
+    download(fileBase() + "-all-data.json", JSON.stringify(data, null, 1), "application/json");
+  });
+  try { const l = store.get("aso_ai_lang"); if (l) $("#aiLang").value = l; } catch {}
+  $("#aiLang").onchange = () => store.set("aso_ai_lang", $("#aiLang").value);
+}
+
 // ---------------------------------------------------------------- rank history chart
 let openChartId = null, chartShowTable = false;
 function niceMax(v) { for (const m of [10, 20, 50, 100, 150, 200, 250]) if (v <= m) return m; return Math.ceil(v / 50) * 50; }
@@ -1358,6 +1490,7 @@ $("#logout").onclick = () => {
   showGate();
 };
 
+initExport();
 applyI18n();
 if (LOCAL) start();
 else if (!GH.token()) showGate();
