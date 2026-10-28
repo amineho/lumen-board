@@ -280,8 +280,17 @@ code { font: 12px ui-monospace, Menlo, Consolas, monospace; direction: ltr; unic
       <div class="tablewrap"><table id="cdTable"></table></div>
       <div class="pager" id="cdPager" data-pager="cd"></div>
     </div>
+    <div class="card">
+      <h2 data-i18n="poolTitle"></h2>
+      <div class="muted" style="margin-bottom:10px" data-i18n="poolHelp"></div>
+      <div class="row" style="margin-bottom:10px"><div style="max-width:200px"><select id="paCountry" aria-label="Country"></select></div></div>
+      <div class="grid" id="poolStats"></div>
+      <div class="tablewrap"><table id="paTable"></table></div>
+      <div class="pager" id="paPager" data-pager="pa"></div>
+    </div>
   </section>
 
+  <!-- (pool kayban f discovery) -->
   <!-- COMPETITORS -->
   <section id="tab-competitors" class="hidden">
     <div class="card">
@@ -318,7 +327,8 @@ code { font: 12px ui-monospace, Menlo, Consolas, monospace; direction: ltr; unic
       <div class="row">
         <div><label for="cfgApp" data-i18n="appId"></label><input id="cfgApp" dir="ltr"></div>
         <div id="cfgHourWrap"><label for="cfgHour" data-i18n="hour"></label><input id="cfgHour" type="number" min="0" max="23"></div>
-        <div><label for="cfgCand" data-i18n="cand"></label><input id="cfgCand" type="number" min="0" max="200"></div>
+        <div><label for="cfgCand" data-i18n="cand"></label><input id="cfgCand" type="number" min="0" max="500"></div>
+        <div><label for="cfgPool" data-i18n="poolPer"></label><input id="cfgPool" type="number" min="0" max="2000"></div>
       </div>
       <label for="cfgCountries" data-i18n="countriesL"></label>
       <input id="cfgCountries" dir="ltr">
@@ -388,6 +398,11 @@ const I18N = {
     vHigh: "High", vMedium: "Medium", vLow: "Low", vNone: "None", vTarget: "Target",
     estNote: "Popularity, difficulty and value are estimates built from the top 10 apps for each keyword and their ratings, because Apple does not publish search volumes. Value combines popularity with your position: <b>High</b> means the keyword likely brings you installs, <b>Target</b> means you don't rank yet but it looks popular and beatable.",
     bringInstalls: "Bring installs (est.)", targets: "Targets",
+    poolTitle: "Keyword pool (snowball)",
+    poolHelp: "For every keyword where your game is in the top 10, the tracker saves the top 10 games for it (once per app) and stores all their keywords in every language of the country. It tests your game on these keywords every day: never-tested first, then older ones again. Keywords where your game ranks are added to your list, and their top 10 games feed the pool in turn.",
+    poolApps: "Apps in the pool", poolTerms: "Keywords in the pool", poolTested: "Tested", poolRanked: "Your game ranks",
+    fromKw: "Found via keyword", addedOn: "Added", nTerms: "Keywords", emptyPool: "The pool is empty for now. It fills after the next full check, from keywords where your game is in the top 10.",
+    oPool: "Pool: {name}", poolPer: "Pool keywords to test per country", stPool: "Keyword pool ({c})",
     perPage: "Per page", showing: "{a}–{b} of {n}", prevPage: "Previous page", nextPage: "Next page",
     tabCompetitors: "Competitors", compTitle: "Your main competitors",
     compHelp: "Games in your category that appear most often in the top 10 of your keywords. Their keywords come from their name and description, because the App Store Connect keyword field is private. Every day the tracker tests your game on these keywords and adds the ones where it ranks.",
@@ -463,6 +478,11 @@ const I18N = {
     vHigh: "مرتفعة", vMedium: "متوسطة", vLow: "منخفضة", vNone: "لا شيء", vTarget: "فرصة",
     estNote: "الشعبية والصعوبة والقيمة تقديرات مبنية على أفضل 10 تطبيقات لكل كلمة مفتاحية وعدد تقييماتها، لأن Apple لا تنشر أحجام البحث. تجمع القيمة بين الشعبية وترتيبك: <b>مرتفعة</b> تعني أن الكلمة تجلب لك تثبيتات على الأرجح، و<b>فرصة</b> تعني أنك لا تظهر فيها بعد لكنها تبدو شائعة ويمكن المنافسة عليها.",
     bringInstalls: "تجلب تثبيتات (تقديريًا)", targets: "فرص",
+    poolTitle: "مخزون الكلمات (كرة الثلج)",
+    poolHelp: "لكل كلمة مفتاحية تكون لعبتك فيها ضمن أفضل 10، يحفظ المتتبّع أفضل 10 ألعاب فيها (مرة واحدة لكل تطبيق) ويخزّن كل كلماتها المفتاحية بجميع لغات الدولة. ثم يختبر لعبتك على هذه الكلمات يوميًا: التي لم تُختبر أولًا، ثم القديمة من جديد. الكلمات التي تظهر فيها لعبتك تُضاف إلى قائمتك، وتغذّي أفضل 10 ألعاب فيها المخزون بدورها.",
+    poolApps: "تطبيقات في المخزون", poolTerms: "كلمات في المخزون", poolTested: "اختُبرت", poolRanked: "تظهر فيها لعبتك",
+    fromKw: "عُثر عليه عبر الكلمة", addedOn: "تاريخ الإضافة", nTerms: "عدد الكلمات", emptyPool: "المخزون فارغ حاليًا. سيمتلئ بعد الفحص الكامل القادم، انطلاقًا من الكلمات التي تكون فيها لعبتك ضمن أفضل 10.",
+    oPool: "المخزون: {name}", poolPer: "عدد كلمات المخزون المختبرة لكل دولة", stPool: "مخزون الكلمات ({c})",
     perPage: "لكل صفحة", showing: "{a}–{b} من {n}", prevPage: "الصفحة السابقة", nextPage: "الصفحة التالية",
     tabCompetitors: "المنافسون", compTitle: "أبرز منافسيك",
     compHelp: "ألعاب من فئتك تظهر أكثر من غيرها في أفضل 10 نتائج لكلماتك المفتاحية. كلماتها المفتاحية مستخرجة من اسمها ووصفها، لأن حقل الكلمات المفتاحية في App Store Connect خاص. يختبر المتتبّع لعبتك يوميًا على هذه الكلمات ويضيف التي تظهر فيها.",
@@ -535,6 +555,7 @@ function originLabel(o) {
   o = LEGACY_ORIGINS[o] || o || "";
   if (o.startsWith("competitor:")) return t("oCompApp", {name: o.slice(11)});
   if (o.startsWith("seed:")) return t("oSeed", {lang: o.slice(5).toUpperCase()});
+  if (o.startsWith("pool:")) return t("oPool", {name: o.slice(5)});
   const m = o.match(/^(?:competitors:|concurrents \()(\d+)/);
   if (m) return t("oComp", {n: m[1]});
   return {my_keywords: t("oMy"), own_title: t("oOwn"), description: t("oDesc"), combo: t("oCombo")}[o] || o;
@@ -543,7 +564,7 @@ function stepLabel(step) {
   if (!step) return "";
   const [kind, rest = ""] = step.split(/:(.*)/s);
   const [k, c] = rest.includes("|") ? [rest.slice(0, rest.lastIndexOf("|")), rest.slice(rest.lastIndexOf("|") + 1)] : ["", rest];
-  return {info: t("stInfo", {c}), charts: t("stCharts", {c}), competitors: t("stCompetitors", {c}), keyword: t("stKeyword", {k: bdi(k), c}), discovery: t("stDiscovery", {k: bdi(k), c}), done: t("stDone")}[kind] || esc(step);
+  return {info: t("stInfo", {c}), charts: t("stCharts", {c}), competitors: t("stCompetitors", {c}), pool: t("stPool", {c}), keyword: t("stKeyword", {k: bdi(k), c}), discovery: t("stDiscovery", {k: bdi(k), c}), done: t("stDone")}[kind] || esc(step);
 }
 
 const ICONS = {
@@ -564,7 +585,7 @@ const GH = {
 const actionsUrl = () => `https://github.com/${GH.repo()}/actions`;
 const ghLink = (url = actionsUrl(), key = "follow") => `<a href="${esc(url)}" target="_blank" rel="noopener">${t(key)}</a>`;
 
-let S = null, KW = [], CD = [], CO = {}, tab = "overview";
+let S = null, KW = [], CD = [], CO = {}, PO = {}, tab = "overview";
 let staticCache = {};
 
 async function ghApi(path, opts = {}) {
@@ -658,6 +679,7 @@ async function api(p, body) {
     if (u.pathname === "/api/keywords") return (await staticGet("keywords.json")) || [];
     if (u.pathname === "/api/candidates") return (await staticGet("candidates.json")) || [];
     if (u.pathname === "/api/competitors") return (await staticGet("competitors.json")) || {};
+    if (u.pathname === "/api/pool") return (await staticGet("pool.json")) || {};
     if (u.pathname === "/api/serp") return ((await staticGet("serp.json")) || {})[u.searchParams.get("id")] || {apps: []};
     if (u.pathname === "/api/analysis") return ((await staticGet("analysis.json")) || {})[u.searchParams.get("country")] || {words: [], sample: 0};
   }
@@ -673,7 +695,7 @@ async function api(p, body) {
   }
   if (u.pathname === "/api/config") {
     await editConfig(cfg => {
-      cfg.app_id = body.app_id; cfg.candidates_per_run = +body.candidates_per_run; cfg.my_keywords = body.my_keywords;
+      cfg.app_id = body.app_id; cfg.candidates_per_run = +body.candidates_per_run; cfg.pool_per_run = +body.pool_per_run; cfg.my_keywords = body.my_keywords;
       cfg.countries = body.countries.split(",").map(c => c.trim().toLowerCase()).filter(Boolean);
       return "update";
     });
@@ -758,11 +780,11 @@ function renderHeader() {
 }
 function renderSettingsForm() {
   const cc = S.config.countries;
-  [["#infoCountry"], ["#kwCountry", 1], ["#cdCountry", 1], ["#anCountry"], ["#coCountry"]].forEach(([s, a]) => fillCountrySelect($(s), a));
+  [["#infoCountry"], ["#kwCountry", 1], ["#cdCountry", 1], ["#anCountry"], ["#coCountry"], ["#paCountry"]].forEach(([s, a]) => fillCountrySelect($(s), a));
   const checked = new Set([...document.querySelectorAll("#addCountries input:checked")].map(i => i.value));
   $("#addCountries").innerHTML = cc.map(c => `<label><input type="checkbox" value="${c}" ${!checked.size || checked.has(c) ? "checked" : ""}> ${flag(c)} ${c.toUpperCase()}</label>`).join("");
   if (!$("#cfgApp").dataset.filled) {
-    $("#cfgApp").value = S.config.app_id; $("#cfgHour").value = S.config.daily_hour; $("#cfgCand").value = S.config.candidates_per_run;
+    $("#cfgApp").value = S.config.app_id; $("#cfgHour").value = S.config.daily_hour; $("#cfgCand").value = S.config.candidates_per_run; $("#cfgPool").value = S.config.pool_per_run ?? 100;
     $("#cfgCountries").value = cc.join(", "); $("#cfgKw").value = S.config.my_keywords; $("#cfgApp").dataset.filled = "1";
   }
   $("#apiMode").innerHTML = S.api_mode === "blocked" ? t("apiBlocked") : S.api_mode === "ok" ? t("apiOk") : t("apiNone");
@@ -805,9 +827,11 @@ const PAGE_SIZES = [25, 50, 100, 500, 0];
 const PAGERS = {
   kw: {page: 1, size: +store.get("aso_size_kw") || 50, render: () => renderKeywords()},
   cd: {page: 1, size: +store.get("aso_size_cd") || 50, render: () => renderCandidates()},
+  pa: {page: 1, size: +store.get("aso_size_pa") || 25, render: () => renderPool()},
 };
 if (store.get("aso_size_kw") === "0") PAGERS.kw.size = 0;
 if (store.get("aso_size_cd") === "0") PAGERS.cd.size = 0;
+if (store.get("aso_size_pa") === "0") PAGERS.pa.size = 0;
 function pageSlice(id, rows) {
   const P = PAGERS[id], pages = P.size ? Math.max(1, Math.ceil(rows.length / P.size)) : 1;
   P.page = Math.min(Math.max(1, P.page), pages);
@@ -890,6 +914,18 @@ function renderCandidates() {
   renderPager("cd");
 }
 
+function renderPool() {
+  const c = $("#paCountry").value, P = (PO || {})[c] || {apps: [], terms: 0, tested: 0, ranked: 0};
+  $("#poolStats").innerHTML = [[num(P.apps.length), t("poolApps")], [num(P.terms), t("poolTerms")], [num(P.tested), t("poolTested")], [num(P.ranked), t("poolRanked")]]
+    .map(([v, l]) => `<div class="stat"><div class="v">${v}</div><div class="l">${l}</div></div>`).join("");
+  const shown = pageSlice("pa", P.apps);
+  $("#paTable").innerHTML = `<tr><th>${t("app")}</th><th>${t("ratings")}</th><th>${t("fromKw")}</th><th>${t("nTerms")}</th><th>${t("addedOn")}</th></tr>` +
+    (shown.length ? shown.map(a => `<tr><td dir="auto"><a href="https://apps.apple.com/${c}/app/id${a.app_id}" target="_blank" rel="noopener">${esc(a.name)}</a></td>
+      <td>${a.ratings == null ? "—" : num(a.ratings)}</td><td dir="auto">${esc(a.from_term)}</td><td>${num(a.n_terms)}</td><td class="muted">${fmtDate(a.added_at)}</td></tr>`).join("")
+      : `<tr><td colspan="5" class="muted">${t("emptyPool")}</td></tr>`);
+  renderPager("pa");
+}
+
 function renderCompetitors() {
   const c = $("#coCountry").value, rows = (CO || {})[c] || [];
   $("#coLegend").innerHTML = [["ranked", "lgRanked"], ["tracked", "lgTracked"], ["tested", "lgTested"], ["", "lgNew"]]
@@ -937,7 +973,7 @@ function renderStatus(st) {
 }
 
 function renderAll() {
-  renderHeader(); renderSettingsForm(); renderInfo(); renderCharts(); renderStats(); renderKeywords(); renderCandidates(); renderCompetitors();
+  renderHeader(); renderSettingsForm(); renderInfo(); renderCharts(); renderStats(); renderKeywords(); renderCandidates(); renderCompetitors(); renderPool();
   if (tab === "analysis") renderAnalysis();
   if (openChartId != null) showChart(openChartId);
 }
@@ -945,7 +981,7 @@ function renderAll() {
 async function loadAll() {
   staticCache = {};
   await loadState();
-  [KW, CD, CO] = await Promise.all([api("/api/keywords"), api("/api/candidates"), api("/api/competitors")]);
+  [KW, CD, CO, PO] = await Promise.all([api("/api/keywords"), api("/api/candidates"), api("/api/competitors"), api("/api/pool")]);
   renderAll();
   renderStatus(S.status);
 }
@@ -1115,6 +1151,7 @@ $("#kwSearch").oninput = kwFirst;
 ["#cdCountry", "#cdRanked"].forEach(s => $(s).onchange = cdFirst);
 $("#anCountry").onchange = renderAnalysis;
 $("#coCountry").onchange = renderCompetitors;
+$("#paCountry").onchange = () => { PAGERS.pa.page = 1; renderPool(); };
 $("#kwTable").onclick = act(async e => {
   const btn = e.target.closest("button");
   if (btn?.dataset.refresh) { e.stopPropagation(); return refreshKeywords([+btn.dataset.refresh]); }
@@ -1150,7 +1187,7 @@ $("#addBtn").onclick = act(async () => {
   await loadAll(); flash(t("runDone"), "ok");
 });
 $("#saveCfg").onclick = act(async () => {
-  const r = await api("/api/config", {app_id: $("#cfgApp").value.trim(), daily_hour: $("#cfgHour").value, candidates_per_run: $("#cfgCand").value, countries: $("#cfgCountries").value, my_keywords: $("#cfgKw").value});
+  const r = await api("/api/config", {app_id: $("#cfgApp").value.trim(), daily_hour: $("#cfgHour").value, candidates_per_run: $("#cfgCand").value, pool_per_run: $("#cfgPool").value, countries: $("#cfgCountries").value, my_keywords: $("#cfgKw").value});
   $("#cfgMsg").textContent = t("saved");
   $("#cfgApp").dataset.filled = "";
   if (!r.github) return loadAll();

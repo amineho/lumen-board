@@ -39,6 +39,8 @@ DEFAULT_CONFIG = {
     "port": 8080,
     "daily_hour": 9,
     "candidates_per_run": 60,
+    # ch7al mn keyword mn pool (keywords dyal apps li f top 10 m3ak) ytesta f kol bled f kol run
+    "pool_per_run": 100,
     "my_keywords": "",
     # keywords li kantba3o: "term" = f kol l bldan, "term|us" = f bled wa7d
     "manual_keywords": [],
@@ -55,6 +57,10 @@ der die das und mit für ein eine il lo gli di per con
 pour avec sans mais aussi très au aux ce cette ces est sont vous votre vos nous notre ton ta tes ses son sa dans sur par pas plus jeu jeux tout tous
 den dem des zu von ist auf sie du dein deine dich mehr spiel spiele spielen auch nicht noch wie
 tu tus es su sus juego juegos más muy como pero sin sobre jugar
+que una uno unos unas al lo se te me mi cada todo todos este esta estos hay ser puedes tienes
+qui quoi dont où leurs leur chaque deux nos vos ton toute toutes peut faire être avoir
+nicht kein keine oder aber sein ihre ihr wir uns einen einem einer jeden jede
+not none
 seu sua seus suas jogo jogos mais como sem jogar você
 gli le del della dei gioco giochi più tuo tua
 ve ile bir bu için oyun oyunu oyunlar daha çok sen
@@ -176,6 +182,25 @@ def init_db():
             PRIMARY KEY (date, country)
         );
         CREATE TABLE IF NOT EXISTS meta (key TEXT PRIMARY KEY, value TEXT);
+        CREATE TABLE IF NOT EXISTS pool_apps (
+            country TEXT NOT NULL,
+            app_id TEXT NOT NULL,
+            name TEXT,
+            ratings INTEGER,
+            from_term TEXT,
+            added_at TEXT,
+            refreshed_at TEXT,
+            n_terms INTEGER,
+            PRIMARY KEY (country, app_id)
+        );
+        CREATE TABLE IF NOT EXISTS pool_terms (
+            country TEXT NOT NULL,
+            term TEXT NOT NULL,
+            app_id TEXT,
+            added_at TEXT,
+            n_apps INTEGER DEFAULT 1,
+            PRIMARY KEY (country, term)
+        );
         CREATE TABLE IF NOT EXISTS competitors (
             date TEXT NOT NULL,
             country TEXT NOT NULL,
@@ -370,6 +395,11 @@ http https www com net payment payments them they their these those this that wh
 about more most other such than then there here anytime everyone anyone something available required includes include
 upon still feel able through against around forward who down high end cancel service cycle apple template api
 licensed membership information continue stay different unique special bigger impressive extended successful
+after again always alone ads adjust allow allows across along already another anything around back being both
+can't could don't does doing done during enough even ever few found full get gets got going good great had has
+have how its just know last least let lets lot made makes making may might must new now off once one ones out over
+put same see should since some soon sure tell things think those today too try two under until use used using want
+well were what's while who's why within won't would yet you're you'll
 """.split())
 
 
@@ -436,6 +466,81 @@ def analyze_competitors(country, app_id, d):
             if kept == COMPETITORS_PER_COUNTRY:
                 break
     return kept
+
+
+POOL_REFRESH_DAYS = 30   # keywords dyal app f pool kayt3awdo ytjabdo mn ba3d had l iyam
+POOL_NEW_APPS_PER_RUN = 80
+
+
+def grow_pool(country, app_id, d):
+    """Snowball: apps li f top 10 dyal keywords fin app dyalna f top 10 ➜ pool_apps,
+    o keywords dyalhom (b ga3 lughat dyal bled) ➜ pool_terms. App msjjla 9bel kattjawz."""
+    cutoff = (datetime.date.fromisoformat(d) - datetime.timedelta(days=POOL_REFRESH_DAYS)).isoformat()
+    with db() as con:
+        rows = con.execute("""SELECT k.term, s.app_id FROM keywords k
+            JOIN ranks r ON r.keyword_id = k.id AND r.date = (SELECT MAX(date) FROM ranks WHERE keyword_id = k.id)
+            JOIN serp s ON s.keyword_id = k.id AND s.date = (SELECT MAX(date) FROM serp WHERE keyword_id = k.id)
+            WHERE k.country = ? AND r.rank IS NOT NULL AND r.rank <= 10 ORDER BY r.rank, s.pos""", (country,)).fetchall()
+        fresh = {r["app_id"] for r in con.execute(
+            "SELECT app_id FROM pool_apps WHERE country=? AND refreshed_at >= ?", (country, cutoff))}
+        own = con.execute("SELECT data FROM app_info WHERE country=? ORDER BY date DESC LIMIT 1", (country,)).fetchone()
+    own_genre = (json.loads(own["data"]).get("genre_ids") or [None])[0] if own else None
+    from_term = {}
+    for r in rows:
+        if r["app_id"] != app_id and r["app_id"] not in fresh:
+            from_term.setdefault(r["app_id"], r["term"])
+    new_ids = list(from_term)[:POOL_NEW_APPS_PER_RUN]
+    if not new_ids:
+        return 0, 0
+    info = lookup(new_ids, country)
+    localized = {lang: lookup(new_ids, country, lang) for lang in COUNTRY_LANGS.get(country, [])}
+    apps = terms_added = 0
+    with db() as con:
+        for aid in new_ids:
+            r = info.get(aid)
+            if not r or (own_genre and str(r.get("primaryGenreId")) != str(own_genre)):
+                continue
+            terms = competitor_terms(r.get("trackName", ""), r.get("description", ""), 30)
+            for li in localized.values():
+                lr = li.get(aid) or {}
+                if (lr.get("trackName"), lr.get("description")) != (r.get("trackName"), r.get("description")):
+                    terms += [x for x in competitor_terms(lr.get("trackName", ""), lr.get("description", ""), 20) if x not in terms]
+            before = con.total_changes
+            for term in terms:
+                con.execute("""INSERT INTO pool_terms VALUES (?,?,?,?,1)
+                               ON CONFLICT(country, term) DO UPDATE SET n_apps = n_apps + 1""", (country, term, aid, d))
+            terms_added += con.execute("SELECT COUNT(*) FROM pool_terms WHERE country=? AND app_id=? AND added_at=?",
+                                       (country, aid, d)).fetchone()[0] if con.total_changes > before else 0
+            con.execute("""INSERT INTO pool_apps VALUES (?,?,?,?,?,?,?,?) ON CONFLICT(country, app_id) DO UPDATE SET
+                           name=excluded.name, ratings=excluded.ratings, refreshed_at=excluded.refreshed_at, n_terms=excluded.n_terms""",
+                        (country, aid, r.get("trackName"), r.get("userRatingCount"), from_term[aid], d, d, len(terms)))
+            apps += 1
+    return apps, terms_added
+
+
+def pool_candidates(country, cfg, n, exclude):
+    """Keywords mn pool li mazal ma ttestaw (lwlin), mn ba3d li ttestaw 9bel RETEST_DAYS."""
+    if n <= 0:
+        return []
+    cutoff = (datetime.date.today() - datetime.timedelta(days=RETEST_DAYS)).isoformat()
+    removed = {r.partition("|")[0] for r in cfg.get("removed_keywords", []) if r.endswith("|" + country)}
+    with db() as con:
+        tracked = {r["term"] for r in con.execute("SELECT term FROM keywords WHERE country=?", (country,))}
+        rows = con.execute("""SELECT p.term, a.name, c.tested_at FROM pool_terms p
+            LEFT JOIN pool_apps a ON a.country = p.country AND a.app_id = p.app_id
+            LEFT JOIN candidates c ON c.country = p.country AND c.term = p.term
+            WHERE p.country = ? AND (c.tested_at IS NULL OR c.tested_at < ?)
+            ORDER BY c.tested_at IS NOT NULL, c.tested_at, p.n_apps DESC, p.added_at""", (country, cutoff)).fetchall()
+    out = []
+    for r in rows:
+        term = r["term"]
+        words = set(term.split())
+        if term in tracked or term in removed or term in exclude or words & (TRADEMARKS | STOPWORDS | DESC_STOP):
+            continue
+        out.append((term, f"pool:{r['name'] or ''}"))
+        if len(out) == n:
+            break
+    return out
 
 
 def latest_competitors(country):
@@ -552,7 +657,8 @@ def run_job(discover=True, only_country=None, keyword_ids=None):
                 kws = con.execute("SELECT * FROM keywords WHERE country IN (%s)" % ",".join("?" * len(countries)),
                                   countries).fetchall()
         n_cand = cfg["candidates_per_run"] if discover and not keywords_only else 0
-        STATUS["total"] = len(kws) + (0 if keywords_only else len(countries) * (2 + 3 + 1 + n_cand))
+        n_pool = int(cfg.get("pool_per_run", 100)) if discover and not keywords_only else 0
+        STATUS["total"] = len(kws) + (0 if keywords_only else len(countries) * (2 + 3 + 1 + n_cand + n_pool))
 
         # 1. ma3lomat 3la app
         genres = ["6014"]
@@ -626,12 +732,23 @@ def run_job(discover=True, only_country=None, keyword_ids=None):
                 log(f"{cc.upper()} competitors: {e}")
             STATUS["done"] += 1
 
-        # 5. discovery: keywords jdad
+        # 5. pool (snowball): apps li f top 10 m3ana o keywords dyalhom
+        for cc in [] if not n_pool else countries:
+            STATUS["step"] = f"pool:{cc.upper()}"
+            try:
+                apps, terms = grow_pool(cc, app_id, d)
+                if apps:
+                    log(f"{cc.upper()} pool: +{apps} apps, +{terms} keywords")
+            except Exception as e:
+                log(f"{cc.upper()} pool: {e}")
+
+        # 6. discovery: keywords jdad (ideas + pool)
         found = 0
         for cc in countries:
-            if not n_cand:
+            if not n_cand and not n_pool:
                 break
             cands = generate_candidates(cc, cfg)[:n_cand]
+            cands += pool_candidates(cc, cfg, n_pool, {t for t, _ in cands})
             for term, origin in cands:
                 STATUS["step"] = f"discovery:{term}|{cc.upper()}"
                 try:
@@ -651,7 +768,7 @@ def run_job(discover=True, only_country=None, keyword_ids=None):
                 except Exception as e:
                     log(f"discovery '{term}' {cc}: {e}")
                 STATUS["done"] += 1
-            STATUS["done"] += n_cand - len(cands)
+            STATUS["done"] += n_cand + n_pool - len(cands)
 
         if not only_country and not keywords_only:
             meta_set("last_run", d)
@@ -795,9 +912,22 @@ def api_competitors():
     return out
 
 
+def api_pool():
+    out = {}
+    with db() as con:
+        for cc in load_config()["countries"]:
+            stats = con.execute("""SELECT COUNT(*) terms, SUM(c.tested_at IS NOT NULL) tested, SUM(c.rank IS NOT NULL) ranked
+                FROM pool_terms p LEFT JOIN candidates c ON c.country = p.country AND c.term = p.term WHERE p.country = ?""",
+                (cc,)).fetchone()
+            apps = [dict(r) for r in con.execute("""SELECT app_id, name, ratings, from_term, added_at, n_terms FROM pool_apps
+                WHERE country = ? ORDER BY added_at DESC, ratings DESC""", (cc,))]
+            out[cc] = {"apps": apps, "terms": stats["terms"] or 0, "tested": stats["tested"] or 0, "ranked": stats["ranked"] or 0}
+    return out
+
+
 def api_candidates():
     with db() as con:
-        return [dict(r) for r in con.execute("SELECT * FROM candidates ORDER BY tested_at DESC, rank IS NULL, rank LIMIT 500")]
+        return [dict(r) for r in con.execute("SELECT * FROM candidates ORDER BY tested_at DESC, rank IS NULL, rank LIMIT 5000")]
 
 
 def api_analysis(country):
@@ -850,6 +980,8 @@ class Handler(BaseHTTPRequestHandler):
             return self.send(api_keywords())
         if u.path == "/api/serp":
             return self.send(api_serp(int(q["id"][0])))
+        if u.path == "/api/pool":
+            return self.send(api_pool())
         if u.path == "/api/competitors":
             return self.send(api_competitors())
         if u.path == "/api/candidates":
@@ -894,13 +1026,14 @@ class Handler(BaseHTTPRequestHandler):
             return self.send({"ok": True})
         if u.path == "/api/config":
             cfg = load_config()
-            for k in ("app_id", "countries", "daily_hour", "candidates_per_run", "my_keywords"):
+            for k in ("app_id", "countries", "daily_hour", "candidates_per_run", "pool_per_run", "my_keywords"):
                 if k in b:
                     cfg[k] = b[k]
             if isinstance(cfg["countries"], str):
                 cfg["countries"] = [c.strip().lower() for c in cfg["countries"].split(",") if c.strip()]
             cfg["daily_hour"] = int(cfg["daily_hour"])
             cfg["candidates_per_run"] = int(cfg["candidates_per_run"])
+            cfg["pool_per_run"] = int(cfg.get("pool_per_run", 100))
             save_config(cfg)
             return self.send({"ok": True, "config": cfg})
         self.send({"error": "not found"}, 404)
@@ -949,6 +1082,7 @@ def export_static():
         "keywords.json": keywords,
         "candidates.json": api_candidates(),
         "competitors.json": api_competitors(),
+        "pool.json": api_pool(),
         "serp.json": {str(k["id"]): api_serp(k["id"]) for k in keywords},
         "analysis.json": {cc: api_analysis(cc) for cc in state["config"]["countries"]},
     }
