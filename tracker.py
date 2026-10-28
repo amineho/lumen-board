@@ -52,7 +52,23 @@ new best free game games app apps play fun top lite pro hd edition mobile online
 2022 2023 2024 2025 2026 2027 vs our get can will just more most like into out up win now
 de la le les des et du en un une el los las y con para por del da do dos das em um uma
 der die das und mit für ein eine il lo gli di per con
+pour avec sans mais aussi très au aux ce cette ces est sont vous votre vos nous notre ton ta tes ses son sa dans sur par pas plus jeu jeux tout tous
+den dem des zu von ist auf sie du dein deine dich mehr spiel spiele spielen auch nicht noch wie
+tu tus es su sus juego juegos más muy como pero sin sobre jugar
+seu sua seus suas jogo jogos mais como sem jogar você
+gli le del della dei gioco giochi più tuo tua
+ve ile bir bu için oyun oyunu oyunlar daha çok sen
+في من على إلى الى عن مع هذا هذه ذلك تلك التي الذي الذين أن إن ان كان كانت كل لا ما هو هي أو او ثم قد لقد عند بين
+حتى بعد قبل كما أيضا ايضا أكثر لك لكم يمكنك يمكن لعبة ألعاب العاب اللعبة الآن جدا مثل كيف أي اي نحن أنت انت
 """.split())
+
+# lughat dyal kol bled (mzyada 3la lugha par défaut dyal store). Apple kat3ti metadata b had lughat b ?lang=
+COUNTRY_LANGS = {
+    "ma": ["fr_fr", "ar"], "dz": ["fr_fr", "ar"], "tn": ["fr_fr", "ar"], "sa": ["ar"], "ae": ["ar"], "eg": ["ar"],
+    "qa": ["ar"], "kw": ["ar"], "bh": ["ar"], "om": ["ar"], "jo": ["ar"], "lb": ["ar", "fr_fr"], "iq": ["ar"],
+    "ca": ["fr_ca"], "be": ["fr_fr"], "ch": ["de_de", "fr_fr"], "us": ["es_mx"], "il": ["he"], "in": ["hi"],
+}
+CJK = re.compile(r"[\u3040-\u30ff\u3400-\u9fff\uac00-\ud7af]")
 
 # Marques dyal nas khrin: Apple katrefd app ila 7tetihom f smiya wla keywords
 TRADEMARKS = set("""
@@ -193,12 +209,12 @@ def fetch(url):
             time.sleep(15 * (attempt + 1))
 
 
-def lookup(ids, country):
+def lookup(ids, country, lang=None):
     out = {}
     ids = list(dict.fromkeys(ids))
     for i in range(0, len(ids), 100):
         chunk = ids[i:i + 100]
-        d = json.loads(fetch(f"https://itunes.apple.com/lookup?country={country}&id={','.join(chunk)}"))
+        d = json.loads(fetch(f"https://itunes.apple.com/lookup?country={country}&id={','.join(chunk)}" + (f"&lang={lang}" if lang else "")))
         for r in d.get("results", []):
             out[str(r["trackId"])] = r
     return out
@@ -280,7 +296,8 @@ def tokens(text, split_dots=True):
         w = w.strip(".'-+")
         # "basketball.io" kat3ti "basketball.io" o 7ta "basketball"
         for part in [w] + (w.split(".") if "." in w and split_dots else []):
-            if not part or part in STOPWORDS:
+            # kalma 3arabiya ma katbdach b "ة" wla "ى": ila bdat bihom ya3ni ktaba m9louba (RTL ghalta)
+            if not part or part in STOPWORDS or part[0] in "ةى":
                 continue
             if len(part) >= 3 or (len(part) == 2 and any(ch.isdigit() for ch in part)):
                 out.append(part)
@@ -298,7 +315,10 @@ def own_text(country):
     if not row:
         return "", ""
     info = json.loads(row["data"])
-    return info.get("name", "") + " " + info.get("subtitle", ""), info.get("description", "")
+    loc = info.get("localized", {}).values()
+    title = " ".join([info.get("name", ""), info.get("subtitle", "")] + [x.get("name", "") for x in loc])
+    desc = "\n".join([info.get("description", "")] + [x.get("description", "") for x in loc])
+    return title, desc
 
 
 def market_titles(country, days=14):
@@ -328,14 +348,14 @@ licensed membership information continue stay different unique special bigger im
 """.split())
 
 
-def competitor_terms(name, description):
+def competitor_terms(name, description, limit=25):
     """Keywords li kaybano f smiya o description dyal concurrent (keywords dyal App Store Connect makhfiyin)."""
     c = Counter()
     for w in tokens(name, split_dots=False):
         c[w] += 3
     for ph in phrases(name, 2):
         c[ph] += 3
-    desc = (description or "")[:4000]
+    desc = "" if CJK.search(description or "") else (description or "")[:4000]
     for w, n in Counter(tokens(desc, split_dots=False)).items():
         if n >= 2:
             c[w] += min(n, 6) * 0.5
@@ -348,7 +368,7 @@ def competitor_terms(name, description):
         if "." in term or "/" in term or any(w in DESC_STOP or w in TRADEMARKS or w.isdigit() for w in words):
             continue
         out.append(term)
-        if len(out) == 25:
+        if len(out) == limit:
             break
     return out
 
@@ -370,6 +390,7 @@ def analyze_competitors(country, app_id, d):
         st["pos"] += r["pos"]
     top = sorted(stats, key=lambda a: (-stats[a]["n"], stats[a]["pos"] / stats[a]["n"]))[:40]
     info = lookup(top, country) if top else {}
+    localized = {lang: lookup(top, country, lang) for lang in COUNTRY_LANGS.get(country, [])} if top else {}
     kept = 0
     with db() as con:
         con.execute("DELETE FROM competitors WHERE date=? AND country=?", (d, country))
@@ -378,9 +399,14 @@ def analyze_competitors(country, app_id, d):
             if not r or (own_genre and str(r.get("primaryGenreId")) != str(own_genre)):
                 continue
             st = stats[aid]
+            terms = competitor_terms(r.get("trackName", ""), r.get("description", ""))
+            for lang, li in localized.items():
+                lr = li.get(aid) or {}
+                if (lr.get("trackName"), lr.get("description")) != (r.get("trackName"), r.get("description")):
+                    terms += [x for x in competitor_terms(lr.get("trackName", ""), lr.get("description", ""), 15) if x not in terms]
             con.execute("INSERT INTO competitors VALUES (?,?,?,?,?,?,?,?,?)", (
                 d, country, aid, r.get("trackName"), r.get("userRatingCount"), st["n"], round(st["pos"] / st["n"], 1),
-                r.get("trackViewUrl"), json.dumps(competitor_terms(r.get("trackName", ""), r.get("description", "")))))
+                r.get("trackViewUrl"), json.dumps(terms[:45])))
             kept += 1
             if kept == COMPETITORS_PER_COUNTRY:
                 break
@@ -517,6 +543,11 @@ def run_job(discover=True, only_country=None, keyword_ids=None):
                         "age": r.get("contentAdvisoryRating"), "price": r.get("formattedPrice"),
                         "description": r.get("description", ""), "notes": r.get("releaseNotes", ""),
                     }
+                    info["localized"] = {}
+                    for lang in COUNTRY_LANGS.get(cc, []):
+                        lr = lookup([app_id], cc, lang).get(app_id) or {}
+                        if lr.get("trackName") and (lr.get("trackName"), lr.get("description")) != (r.get("trackName"), r.get("description")):
+                            info["localized"][lang] = {"name": lr.get("trackName"), "description": lr.get("description", "")}
                     for g in r.get("genreIds", []):
                         if g.startswith("70") and g not in genres:
                             genres.append(g)
