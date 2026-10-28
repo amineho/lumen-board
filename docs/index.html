@@ -3,6 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
 <title>ASO Tracker</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;600&display=swap">
@@ -106,6 +107,16 @@ ol.steps { margin: 4px 0 0; padding-inline-start: 20px; }
 code { font: 12px ui-monospace, Menlo, Consolas, monospace; direction: ltr; unicode-bidi: embed; }
 
 /* chart modal */
+/* login (GitHub mode): dashboard msdoud 7ta yt2kked token */
+.gh:not(.authed) .wrap { display: none; }
+.gate { min-height: 100vh; display: grid; place-items: center; padding-block: 24px; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+.gate-box { width: min(440px, 100%); background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 22px; }
+.gate-box h1 { margin: 0 0 6px; font-size: 20px; }
+.gate-top { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 14px; }
+.gate-lock { width: 40px; height: 40px; border-radius: 10px; display: grid; place-items: center; background: var(--accent-soft); color: var(--accent); }
+.gate-lock svg { width: 20px; height: 20px; }
+.gate details { margin-top: 14px; color: var(--muted); font-size: 13px; }
+.gate summary { cursor: pointer; color: var(--text); }
 .overlay { position: fixed; inset: 0; background: rgba(10, 12, 16, .45); display: grid; place-items: center; padding: max(16px, env(safe-area-inset-top, 0px)) max(16px, env(safe-area-inset-right, 0px)) max(16px, env(safe-area-inset-bottom, 0px)) max(16px, env(safe-area-inset-left, 0px)); z-index: 50; }
 .modal { background: var(--card); border: 1px solid var(--line); border-radius: 14px; box-shadow: var(--shadow); width: min(760px, 100%); max-height: 100%; overflow: auto; padding: 18px; }
 .modal-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; margin-bottom: 12px; }
@@ -122,6 +133,30 @@ code { font: 12px ui-monospace, Menlo, Consolas, monospace; direction: ltr; unic
 </style>
 </head>
 <body>
+<script>if (!/^(localhost|127\.0\.0\.1)$/.test(location.hostname)) document.documentElement.classList.add("gh");</script>
+<div class="gate hidden" id="gate">
+  <form class="gate-box" id="gateForm" autocomplete="off">
+    <div class="gate-top">
+      <div class="gate-lock" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg></div>
+      <div class="seg" role="group" aria-label="Language">
+        <button type="button" class="langEn" lang="en">EN</button>
+        <button type="button" class="langAr" lang="ar">العربية</button>
+      </div>
+    </div>
+    <h1 data-i18n="gateTitle"></h1>
+    <div class="muted" data-i18n="gateIntro"></div>
+    <label for="gateToken" data-i18n="token"></label>
+    <input id="gateToken" type="password" dir="ltr" placeholder="github_pat_…" autocomplete="off" required>
+    <label for="gateRepo" data-i18n="repo"></label>
+    <input id="gateRepo" dir="ltr" placeholder="owner/repo">
+    <div class="note bad hidden" id="gateErr" style="margin:12px 0 0"></div>
+    <div style="margin-top:14px"><button class="primary" id="gateBtn" type="submit" style="width:100%" data-i18n="gateBtn"></button></div>
+    <details>
+      <summary data-i18n="howToken"></summary>
+      <ol class="steps" id="gateSteps"></ol>
+    </details>
+  </form>
+</div>
 <div class="wrap">
   <header>
     <img id="icon" alt="" hidden>
@@ -131,10 +166,11 @@ code { font: 12px ui-monospace, Menlo, Consolas, monospace; direction: ltr; unic
     </div>
     <div class="actions">
       <div class="seg" role="group" aria-label="Language">
-        <button id="langEn" lang="en">EN</button>
-        <button id="langAr" lang="ar">العربية</button>
+        <button class="langEn" lang="en">EN</button>
+        <button class="langAr" lang="ar">العربية</button>
       </div>
       <button id="runFull" class="primary" data-i18n="runFull"></button>
+      <button id="logout" class="hidden" data-i18n="logout"></button>
     </div>
   </header>
 
@@ -306,6 +342,10 @@ const I18N = {
     rankF: "Rank", onlyRanked: "Ranking only", onlyNot: "Not ranking", search: "Search", searchPh: "keyword…",
     keyword: "Keyword", rankToday: "Rank today", change: "Change", best: "Best", last30: "Last 30 days", actions: "Actions",
     badgeYou: "you", badgeAuto: "auto", notChecked: "not yet", newRank: "new", dropped: "dropped out",
+    gateTitle: "Sign in", gateIntro: "This dashboard is private. Sign in with a GitHub token that has write access to the repository.",
+    gateBtn: "Sign in", gateChecking: "Checking…", gateBad: "GitHub rejected this token. Check it and try again.",
+    gateNoRepo: "The repository {repo} was not found with this token. Check the repository name and that the token includes it.",
+    gateNoAccess: "This token has no write access to {repo}.", logout: "Sign out",
     refreshKw: "Refresh rank", chartKw: "Rank history", del: "Remove", confirmDelete: "Remove this keyword?",
     emptyKw: "No keywords yet. Add some above or run a full check.",
     serpTitle: "Top 10 for “{k}”", app: "App",
@@ -366,6 +406,10 @@ const I18N = {
     rankF: "الترتيب", onlyRanked: "التي يظهر فيها فقط", onlyNot: "التي لا يظهر فيها", search: "بحث", searchPh: "كلمة مفتاحية…",
     keyword: "الكلمة المفتاحية", rankToday: "الترتيب اليوم", change: "التغيّر", best: "الأفضل", last30: "آخر 30 يومًا", actions: "إجراءات",
     badgeYou: "أنت", badgeAuto: "تلقائي", notChecked: "لم تُفحص", newRank: "جديد", dropped: "خرج من النتائج",
+    gateTitle: "تسجيل الدخول", gateIntro: "هذه اللوحة خاصة. سجّل الدخول برمز GitHub له صلاحية الكتابة على المستودع.",
+    gateBtn: "تسجيل الدخول", gateChecking: "جارٍ التحقق…", gateBad: "رفض GitHub هذا الرمز. تحقّق منه وحاول مجددًا.",
+    gateNoRepo: "لم يُعثر على المستودع {repo} بهذا الرمز. تحقّق من اسم المستودع ومن أن الرمز يشمله.",
+    gateNoAccess: "هذا الرمز لا يملك صلاحية الكتابة على {repo}.", logout: "تسجيل الخروج",
     refreshKw: "تحديث الترتيب", chartKw: "سجل الترتيب", del: "حذف", confirmDelete: "هل تريد حذف هذه الكلمة المفتاحية؟",
     emptyKw: "لا توجد كلمات مفتاحية بعد. أضف بعضها في الأعلى أو شغّل فحصًا كاملًا.",
     serpTitle: "أفضل 10 نتائج لـ «{k}»", app: "التطبيق",
@@ -474,13 +518,26 @@ async function ghApi(path, opts = {}) {
   return (opts.headers || {}).Accept === "application/vnd.github.raw+json" ? r.text() : r.json();
 }
 function staticGet(name) {
-  return staticCache[name] ??= (async () => {
-    if (GH.token()) {
-      try { return JSON.parse(await ghApi(`/contents/docs/data/${name}?ref=main`, {headers: {Accept: "application/vnd.github.raw+json"}})); } catch {}
-    }
-    const r = await fetch(`data/${name}?t=${Date.now()}`);
-    return r.ok ? r.json() : null;
-  })();
+  // GitHub mode: data kat t9ra ghir b GitHub API b token dyal li dar login
+  return staticCache[name] ??= ghApi(`/contents/docs/data/${name}?ref=main`, {headers: {Accept: "application/vnd.github.raw+json"}})
+    .then(JSON.parse).catch(e => { if (/404/.test(e.message)) return null; throw e; });
+}
+// token khasso l7a9 ykteb f repo (ya3ni mol repo wla collaborator)
+async function verifyLogin(token, repo) {
+  const r = await fetch(`https://api.github.com/repos/${repo}`, {headers: {Authorization: `Bearer ${token}`, Accept: "application/vnd.github+json"}});
+  if (r.status === 401) return t("gateBad");
+  if (r.status === 404 || r.status === 403) return t("gateNoRepo", {repo: esc(repo)});
+  if (!r.ok) return `GitHub ${r.status}`;
+  const d = await r.json();
+  return d.permissions?.push ? "" : t("gateNoAccess", {repo: esc(repo)});
+}
+function showGate(err) {
+  document.documentElement.classList.remove("authed");
+  $("#gate").classList.remove("hidden");
+  $("#gateRepo").value = GH.repo();
+  $("#gateErr").innerHTML = err || "";
+  $("#gateErr").classList.toggle("hidden", !err);
+  $("#gateToken").focus();
 }
 async function editConfig(change) {
   const f = await ghApi("/contents/config.json");
@@ -593,18 +650,19 @@ function applyI18n() {
   document.querySelectorAll("[data-i18n]").forEach(el => el.innerHTML = t(el.dataset.i18n));
   document.querySelectorAll("[data-i18n-ph]").forEach(el => el.placeholder = t(el.dataset.i18nPh));
   document.querySelectorAll("[data-i18n-title]").forEach(el => { el.title = t(el.dataset.i18nTitle); el.setAttribute("aria-label", el.title); });
-  $("#langEn").classList.toggle("on", LANG === "en");
-  $("#langAr").classList.toggle("on", LANG === "ar");
+  document.querySelectorAll(".langEn").forEach(b => b.classList.toggle("on", LANG === "en"));
+  document.querySelectorAll(".langAr").forEach(b => b.classList.toggle("on", LANG === "ar"));
   $("#chartClose").innerHTML = ICONS.close;
   $("#refreshAll").innerHTML = ICONS.refresh + `<span>${t("refreshAll")}</span>`;
   const repo = esc(GH.repo().split("/")[1] || "");
-  $("#ghSteps").innerHTML = [t("s1", {link: `<a href="https://github.com/settings/personal-access-tokens/new" target="_blank" rel="noopener" dir="ltr">github.com/settings/personal-access-tokens/new</a>`}),
+  $("#ghSteps").innerHTML = $("#gateSteps").innerHTML = [t("s1", {link: `<a href="https://github.com/settings/personal-access-tokens/new" target="_blank" rel="noopener" dir="ltr">github.com/settings/personal-access-tokens/new</a>`}),
     t("s2"), t("s3", {repo}), t("s4"), t("s5")].map(s => `<li>${s}</li>`).join("");
   $("#ghSchedule").innerHTML = `${t("schedule")} ${ghLink(actionsUrl(), "seeRuns")}`;
 }
 function setLang(l) {
   LANG = l; store.set("aso_lang", l);
   $("#flash").classList.add("hidden");
+  $("#gateErr").classList.add("hidden");
   applyI18n();
   if (S) { renderAll(); renderStatus(S.status); }
 }
@@ -890,8 +948,8 @@ async function pollLocal() {
 
 // ---------------------------------------------------------------- events
 const act = fn => async e => { try { await fn(e); } catch (err) { flash(err.message, "bad"); } };
-$("#langEn").onclick = () => setLang("en");
-$("#langAr").onclick = () => setLang("ar");
+document.querySelectorAll(".langEn").forEach(b => b.onclick = () => setLang("en"));
+document.querySelectorAll(".langAr").forEach(b => b.onclick = () => setLang("ar"));
 $("#tabs").onclick = e => {
   const tb = e.target.dataset.tab; if (!tb) return;
   tab = tb;
@@ -979,16 +1037,43 @@ async function ghRunStatus() {
   } catch (e) { flash(e.message, "bad"); }
 }
 
-if (!LOCAL) {
-  $("#ghCard").classList.remove("hidden");
-  $("#cfgHourWrap").classList.add("hidden");
-  $("#ghRepo").value = GH.repo(); $("#ghToken").value = GH.token();
-}
-applyI18n();
-loadAll().then(() => {
-  if (LOCAL && S.status.running) pollLocal().then(loadAll);
+async function start() {
+  if (!LOCAL) {
+    document.documentElement.classList.add("authed");
+    $("#gate").classList.add("hidden");
+    $("#logout").classList.remove("hidden");
+    $("#ghCard").classList.remove("hidden");
+    $("#cfgHourWrap").classList.add("hidden");
+    $("#ghRepo").value = GH.repo(); $("#ghToken").value = GH.token();
+  }
+  await loadAll().catch(e => flash(e.message, "bad"));
+  if (LOCAL && S?.status.running) pollLocal().then(loadAll);
   ghRunStatus();
-}).catch(() => {});
+}
+$("#gateForm").onsubmit = async e => {
+  e.preventDefault();
+  const token = $("#gateToken").value.trim(), repo = $("#gateRepo").value.trim() || GH.repo();
+  $("#gateBtn").disabled = true; $("#gateBtn").textContent = t("gateChecking");
+  try {
+    const err = await verifyLogin(token, repo);
+    if (err) return showGate(err);
+    store.set("aso_token", token); store.set("aso_repo", repo);
+    $("#gateToken").value = "";
+    applyI18n(); start();
+  } catch (err) { showGate(esc(err.message)); }
+  finally { $("#gateBtn").disabled = false; $("#gateBtn").textContent = t("gateBtn"); }
+};
+$("#logout").onclick = () => {
+  store.set("aso_token", "");
+  staticCache = {}; S = null; KW = []; CD = [];
+  $("#logout").classList.add("hidden");
+  showGate();
+};
+
+applyI18n();
+if (LOCAL) start();
+else if (!GH.token()) showGate();
+else verifyLogin(GH.token(), GH.repo()).then(err => err ? (store.set("aso_token", ""), showGate(err)) : start()).catch(e => showGate(esc(e.message)));
 </script>
 </body>
 </html>
