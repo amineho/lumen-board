@@ -294,11 +294,12 @@ def today():
 
 _last_request = 0.0
 _delay = REQUEST_DELAY
+_ok_streak = 0
 _request_lock = threading.Lock()
 
 
 def fetch(url, headers=None):
-    global _last_request, _delay
+    global _last_request, _delay, _ok_streak
     for attempt in range(4):
         with _request_lock:
             wait = _delay - (time.time() - _last_request)
@@ -311,12 +312,18 @@ def fetch(url, headers=None):
                 data = r.read()
                 if r.headers.get("Content-Encoding") == "gzip":
                     data = gzip.decompress(data)
+            # mli Apple katjaweb mzyan b zzaf d mrat, delay kayhbet b chwiya l l asli
+            _ok_streak += 1
+            if _ok_streak >= 30 and _delay > REQUEST_DELAY:
+                _delay = max(REQUEST_DELAY, _delay - 0.25)
+                _ok_streak = 0
             return data.decode("utf-8", "replace")
         except urllib.error.HTTPError as e:
             # 429 = Apple katgoul "bzzaf d requests": ntsennaw o n3awdo
             if e.code not in (429, 503) or attempt == 3:
                 raise
             _delay = min(MAX_DELAY, _delay + 0.5)
+            _ok_streak = 0
             time.sleep(15 * (attempt + 1))
 
 
