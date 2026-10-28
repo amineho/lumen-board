@@ -64,6 +64,18 @@ nav button.on { color: var(--text); border-bottom-color: var(--accent); font-wei
 .card h2 { margin: 0 0 12px; font-size: 15px; }
 .card-head { display: flex; gap: 12px; align-items: center; justify-content: space-between; flex-wrap: wrap; margin-bottom: 12px; }
 .card-head h2 { margin: 0; }
+.two { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 340px), 1fr)); gap: 16px; margin-bottom: 16px; }
+.two > * { min-width: 0; }
+.two > .card { margin-bottom: 0; }
+.card .two { margin-bottom: 0; }
+button.link { border: 0; background: none; color: var(--accent); padding: 0; font-size: 13px; }
+button.link:hover { text-decoration: underline; }
+details.more { margin-top: 12px; font-size: 13px; }
+details.more summary { cursor: pointer; color: var(--accent); }
+details.more > div { margin-top: 8px; }
+.panel { background: var(--bg); border: 1px solid var(--line); border-radius: 10px; padding: 4px 14px 14px; margin-bottom: 14px; }
+.subnav { margin-bottom: 14px; flex-wrap: wrap; }
+.subnav button { padding: 8px 14px; }
 .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 12px; margin-bottom: 16px; }
 .stat { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 14px; }
 .stat .v { font-size: 24px; font-weight: 650; font-variant-numeric: tabular-nums; }
@@ -218,35 +230,42 @@ code { font: 12px ui-monospace, Menlo, Consolas, monospace; direction: ltr; unic
   <!-- OVERVIEW -->
   <section id="tab-overview">
     <div class="grid" id="stats"></div>
-    <div class="card">
-      <h2 data-i18n="appInfo"></h2>
-      <div class="row" style="margin-bottom:10px"><div style="max-width:200px"><select id="infoCountry" aria-label="Country"></select></div></div>
-      <div class="kv" id="infoKv"></div>
+    <div class="two">
+      <div class="card">
+        <div class="card-head"><h2 data-i18n="bestKw"></h2><button class="link" data-goto="keywords" data-i18n="seeAll"></button></div>
+        <div class="tablewrap"><table id="bestTable"></table></div>
+      </div>
+      <div class="card">
+        <div class="card-head"><h2 data-i18n="newKw"></h2><button class="link" data-goto="discovery" data-i18n="seeAll"></button></div>
+        <div class="tablewrap"><table id="newTable"></table></div>
+      </div>
     </div>
     <div class="card">
-      <h2 data-i18n="ratingsByCountry"></h2>
-      <div class="tablewrap"><table id="ratingsTable"></table></div>
-    </div>
-    <div class="card">
-      <h2 data-i18n="description"></h2>
-      <div class="desc" id="desc" dir="auto"></div>
+      <div class="card-head"><h2 data-i18n="appInfo"></h2><select id="infoCountry" aria-label="Country" style="width:auto"></select></div>
+      <div class="two">
+        <div class="kv" id="infoKv"></div>
+        <div class="tablewrap"><table id="ratingsTable"></table></div>
+      </div>
+      <details class="more"><summary data-i18n="description"></summary><div class="desc" id="desc" dir="auto"></div></details>
     </div>
   </section>
 
   <!-- KEYWORDS -->
   <section id="tab-keywords" class="hidden">
     <div class="card">
-      <h2 data-i18n="addKeywords"></h2>
-      <label for="newTerms" data-i18n="kwInputLabel"></label>
-      <textarea id="newTerms" dir="auto" placeholder="basketball game&#10;slam dunk&#10;streetball"></textarea>
-      <label data-i18n="inCountries"></label>
-      <div class="chips" id="addCountries"></div>
-      <div style="margin-top:12px"><button class="primary" id="addBtn" data-i18n="add"></button> <span class="muted" id="addMsg"></span></div>
-    </div>
-    <div class="card">
       <div class="card-head">
-        <h2 data-i18n="tabKeywords"></h2>
-        <button id="refreshAll" class="with-icon"></button>
+        <h2><span data-i18n="tabKeywords"></span> <span class="muted" id="kwCount"></span></h2>
+        <div class="row-actions">
+          <button id="toggleAdd" class="with-icon"><span aria-hidden="true">＋</span><span data-i18n="addKeywords"></span></button>
+          <button id="refreshAll" class="with-icon"></button>
+        </div>
+      </div>
+      <div class="panel hidden" id="addPanel">
+        <label for="newTerms" data-i18n="kwInputLabel"></label>
+        <textarea id="newTerms" dir="auto" placeholder="basketball game&#10;slam dunk&#10;streetball"></textarea>
+        <label data-i18n="inCountries"></label>
+        <div class="chips" id="addCountries"></div>
+        <div style="margin-top:12px"><button class="primary" id="addBtn" data-i18n="add"></button> <span class="muted" id="addMsg"></span></div>
       </div>
       <div class="row" style="margin-bottom:10px">
         <div><label for="kwCountry" data-i18n="country"></label><select id="kwCountry"></select></div>
@@ -256,7 +275,7 @@ code { font: 12px ui-monospace, Menlo, Consolas, monospace; direction: ltr; unic
           <option value="" data-i18n="all"></option><option value="1" data-i18n="onlyRanked"></option><option value="0" data-i18n="onlyNot"></option></select></div>
         <div><label for="kwSearch" data-i18n="search"></label><input id="kwSearch" dir="auto" data-i18n-ph="searchPh"></div>
       </div>
-      <div class="muted" style="font-size:12px;margin-bottom:8px" data-i18n="estNote"></div>
+      <details class="more" style="margin:0 0 8px"><summary data-i18n="estTitle"></summary><div class="muted" data-i18n="estNote"></div></details>
       <div class="tablewrap"><table id="kwTable"></table></div>
       <div class="pager" id="kwPager" data-pager="kw"></div>
     </div>
@@ -266,13 +285,30 @@ code { font: 12px ui-monospace, Menlo, Consolas, monospace; direction: ltr; unic
     </div>
   </section>
 
-  <!-- DISCOVERY -->
+  <!-- DISCOVERY: sous-tabs -->
   <section id="tab-discovery" class="hidden">
-    <div class="card">
-      <h2 data-i18n="discoveryHowTitle"></h2>
-      <div class="muted" data-i18n="discoveryHow"></div>
+    <div class="seg subnav" id="discNav" role="tablist">
+      <button data-sub="vip" class="on" data-i18n="subVip"></button>
+      <button data-sub="tested" data-i18n="subTested"></button>
+      <button data-sub="pool" data-i18n="subPool"></button>
+      <button data-sub="how" data-i18n="discoveryHowTitle"></button>
     </div>
-    <div class="card">
+    <div class="card sub" id="sub-vip">
+      <h2 data-i18n="vipTitle"></h2>
+      <details class="more" style="margin:0 0 10px"><summary data-i18n="howItWorks"></summary><div class="muted" data-i18n="vipHelp"></div></details>
+      <div class="grid" id="vipStats"></div>
+      <div class="row" style="margin-bottom:10px">
+        <div style="max-width:200px"><select id="vsCountry" aria-label="Country"></select></div>
+        <div style="max-width:220px"><select id="vsStatus" aria-label="Status">
+          <option value="" data-i18n="all"></option><option value="ranked" data-i18n="lgRanked"></option>
+          <option value="tested" data-i18n="lgTested"></option><option value="new" data-i18n="lgNew"></option></select></div>
+        <div><input id="vsSearch" dir="auto" data-i18n-ph="searchPh" aria-label="Search"></div>
+      </div>
+      <div class="tablewrap"><table id="vsTable"></table></div>
+      <div class="pager" id="vsPager" data-pager="vs"></div>
+    </div>
+    <div class="card sub hidden" id="sub-tested">
+      <h2 data-i18n="subTested"></h2>
       <div class="row" style="margin-bottom:10px">
         <div><label for="cdCountry" data-i18n="country"></label><select id="cdCountry"></select></div>
         <div><label for="cdRanked" data-i18n="result"></label><select id="cdRanked">
@@ -281,27 +317,17 @@ code { font: 12px ui-monospace, Menlo, Consolas, monospace; direction: ltr; unic
       <div class="tablewrap"><table id="cdTable"></table></div>
       <div class="pager" id="cdPager" data-pager="cd"></div>
     </div>
-    <div class="card">
-      <h2 data-i18n="vipTitle"></h2>
-      <div class="muted" style="margin-bottom:10px" data-i18n="vipHelp"></div>
-      <div class="row" style="margin-bottom:10px">
-        <div style="max-width:200px"><select id="vsCountry" aria-label="Country"></select></div>
-        <div style="max-width:220px"><select id="vsStatus" aria-label="Status">
-          <option value="" data-i18n="all"></option><option value="ranked" data-i18n="lgRanked"></option>
-          <option value="tested" data-i18n="lgTested"></option><option value="new" data-i18n="lgNew"></option></select></div>
-        <div><input id="vsSearch" dir="auto" data-i18n-ph="searchPh" aria-label="Search"></div>
-      </div>
-      <div class="grid" id="vipStats"></div>
-      <div class="tablewrap"><table id="vsTable"></table></div>
-      <div class="pager" id="vsPager" data-pager="vs"></div>
-    </div>
-    <div class="card">
+    <div class="card sub hidden" id="sub-pool">
       <h2 data-i18n="poolTitle"></h2>
-      <div class="muted" style="margin-bottom:10px" data-i18n="poolHelp"></div>
+      <details class="more" style="margin:0 0 10px"><summary data-i18n="howItWorks"></summary><div class="muted" data-i18n="poolHelp"></div></details>
       <div class="row" style="margin-bottom:10px"><div style="max-width:200px"><select id="paCountry" aria-label="Country"></select></div></div>
       <div class="grid" id="poolStats"></div>
       <div class="tablewrap"><table id="paTable"></table></div>
       <div class="pager" id="paPager" data-pager="pa"></div>
+    </div>
+    <div class="card sub hidden" id="sub-how">
+      <h2 data-i18n="discoveryHowTitle"></h2>
+      <div class="muted" data-i18n="discoveryHow"></div>
     </div>
   </section>
 
@@ -414,11 +440,14 @@ const I18N = {
     vHigh: "High", vMedium: "Medium", vLow: "Low", vNone: "None", vTarget: "Target",
     estNote: "Popularity, difficulty and value are estimates built from the top 10 apps for each keyword and their ratings, because Apple does not publish search volumes. Value combines popularity with your position: <b>High</b> means the keyword likely brings you installs, <b>Target</b> means you don't rank yet but it looks popular and beatable.",
     bringInstalls: "Bring installs (est.)", targets: "Targets",
+    bestKw: "Best keywords", newKw: "Keywords found recently", seeAll: "See all", noBest: "No keyword brings installs yet. They appear here once your game ranks well in popular keywords.",
+    noNew: "No new keyword yet. The tracker searches every 2 hours.", estTitle: "What do popularity, difficulty and value mean?", howItWorks: "How it works",
+    subVip: "⭐ Apple suggestions", subTested: "Tested keywords", subPool: "Snowball pool",
     vipTitle: "App Store search suggestions ⭐ VIP",
-    vipHelp: "The words App Store suggests while people type in search (autocomplete). Apple shows them because many people search for them, so they are the most valuable keywords. Every hour the tracker types hundreds of searches (keyword starts, keyword + letter, and every suggestion it finds), stores all suggestions and tests your game on them before anything else, again every 3 days. Score: higher when the suggestion appears for a short search and near the top.",
+    vipHelp: "The words App Store suggests while people type in search (autocomplete). Apple shows them because many people search for them, so they are the most valuable keywords. Every 2 hours the tracker types hundreds of searches (keyword starts, keyword + letter, and every suggestion it finds), stores all suggestions and tests your game on them before anything else, again every 3 days. Score: higher when the suggestion appears for a short search and near the top.",
     vipCount: "Suggestions", vipSearches: "Searches done", score: "Score", fromSearch: "Found by typing", firstSeen: "First seen",
     srcVip: "Apple suggestions ⭐", oVip: "Apple suggestion · “{q}”", stSuggest: "App Store suggestions ({c})", vipBadge: "Apple suggests this search",
-    emptyVip: "No suggestions yet. They are collected every hour.",
+    emptyVip: "No suggestions yet. They are collected every 2 hours.",
     poolTitle: "Keyword pool (snowball)",
     poolHelp: "For every keyword where your game is in the top 10, the tracker saves the top 10 games for it (once per app) and stores all their keywords in every language of the country. It tests your game on these keywords every day: never-tested first, then older ones again. Keywords where your game ranks are added to your list, and their top 10 games feed the pool in turn.",
     poolApps: "Apps in the pool", poolTerms: "Keywords in the pool", poolTested: "Tested", poolRanked: "Your game ranks",
@@ -499,11 +528,14 @@ const I18N = {
     vHigh: "مرتفعة", vMedium: "متوسطة", vLow: "منخفضة", vNone: "لا شيء", vTarget: "فرصة",
     estNote: "الشعبية والصعوبة والقيمة تقديرات مبنية على أفضل 10 تطبيقات لكل كلمة مفتاحية وعدد تقييماتها، لأن Apple لا تنشر أحجام البحث. تجمع القيمة بين الشعبية وترتيبك: <b>مرتفعة</b> تعني أن الكلمة تجلب لك تثبيتات على الأرجح، و<b>فرصة</b> تعني أنك لا تظهر فيها بعد لكنها تبدو شائعة ويمكن المنافسة عليها.",
     bringInstalls: "تجلب تثبيتات (تقديريًا)", targets: "فرص",
+    bestKw: "أفضل الكلمات المفتاحية", newKw: "كلمات عُثر عليها مؤخرًا", seeAll: "عرض الكل", noBest: "لا توجد بعد كلمة تجلب تثبيتات. ستظهر هنا عندما تحتل لعبتك ترتيبًا جيدًا في كلمات شائعة.",
+    noNew: "لا توجد كلمات جديدة بعد. يبحث المتتبّع كل ساعتين.", estTitle: "ماذا تعني الشعبية والصعوبة والقيمة؟", howItWorks: "كيف يعمل",
+    subVip: "⭐ اقتراحات Apple", subTested: "الكلمات المختبرة", subPool: "مخزون كرة الثلج",
     vipTitle: "اقتراحات البحث في App Store ⭐ VIP",
-    vipHelp: "الكلمات التي يقترحها App Store أثناء كتابة الناس في البحث (الإكمال التلقائي). تعرضها Apple لأن كثيرًا من الناس يبحثون عنها، فهي أثمن الكلمات المفتاحية. يكتب المتتبّع كل ساعة مئات عمليات البحث (بدايات الكلمات، والكلمة مع حرف، وكل اقتراح يجده)، ويخزّن كل الاقتراحات ويختبر لعبتك عليها قبل أي شيء آخر، ثم يعيد اختبارها كل 3 أيام. النتيجة أعلى كلما ظهر الاقتراح لبحث أقصر وفي مرتبة أعلى.",
+    vipHelp: "الكلمات التي يقترحها App Store أثناء كتابة الناس في البحث (الإكمال التلقائي). تعرضها Apple لأن كثيرًا من الناس يبحثون عنها، فهي أثمن الكلمات المفتاحية. يكتب المتتبّع كل ساعتين مئات عمليات البحث (بدايات الكلمات، والكلمة مع حرف، وكل اقتراح يجده)، ويخزّن كل الاقتراحات ويختبر لعبتك عليها قبل أي شيء آخر، ثم يعيد اختبارها كل 3 أيام. النتيجة أعلى كلما ظهر الاقتراح لبحث أقصر وفي مرتبة أعلى.",
     vipCount: "الاقتراحات", vipSearches: "عمليات البحث المنجزة", score: "النتيجة", fromSearch: "ظهر عند كتابة", firstSeen: "أول ظهور",
     srcVip: "اقتراحات Apple ⭐", oVip: "اقتراح Apple · «{q}»", stSuggest: "اقتراحات App Store ({c})", vipBadge: "تقترح Apple هذا البحث",
-    emptyVip: "لا توجد اقتراحات بعد. تُجمع كل ساعة.",
+    emptyVip: "لا توجد اقتراحات بعد. تُجمع كل ساعتين.",
     poolTitle: "مخزون الكلمات (كرة الثلج)",
     poolHelp: "لكل كلمة مفتاحية تكون لعبتك فيها ضمن أفضل 10، يحفظ المتتبّع أفضل 10 ألعاب فيها (مرة واحدة لكل تطبيق) ويخزّن كل كلماتها المفتاحية بجميع لغات الدولة. ثم يختبر لعبتك على هذه الكلمات يوميًا: التي لم تُختبر أولًا، ثم القديمة من جديد. الكلمات التي تظهر فيها لعبتك تُضاف إلى قائمتك، وتغذّي أفضل 10 ألعاب فيها المخزون بدورها.",
     poolApps: "تطبيقات في المخزون", poolTerms: "كلمات في المخزون", poolTested: "اختُبرت", poolRanked: "تظهر فيها لعبتك",
@@ -844,15 +876,12 @@ function renderInfo() {
 }
 
 function renderStats() {
-  const ranked = KW.filter(k => k.rank), top10 = ranked.filter(k => k.rank <= 10), top3 = ranked.filter(k => k.rank <= 3);
+  const top10 = KW.filter(k => k.rank && k.rank <= 10);
   const ups = KW.filter(k => k.rank && k.prev && k.rank < k.prev).length, downs = KW.filter(k => k.prev && (!k.rank || k.rank > k.prev)).length;
   const auto = KW.filter(k => k.source === "auto").length;
   const bring = KW.filter(k => k.value_label === "high" || k.value_label === "medium").length, targets = KW.filter(k => k.value_label === "target").length;
-  const bestChart = S.charts.filter(c => c.rank).sort((a, b) => a.rank - b.rank)[0];
-  const st = [[num(KW.length), t("kwTracked")], [num(ranked.length), t("ranked")], [num(top3.length), t("top3")], [num(top10.length), t("top10")],
-    [num(bring), t("bringInstalls")], [num(targets), t("targets")],
-    [`<span class="up">${ups}</span> / <span class="down">${downs}</span>`, t("upDown")], [num(auto), t("autoFound")],
-    [bestChart ? `#${bestChart.rank}` : "—", bestChart ? t("bestChart", {g: esc(S.genre_names[bestChart.genre] || bestChart.genre), c: bestChart.country.toUpperCase()}) : t("notInCharts")]];
+  const st = [[num(KW.length), t("kwTracked")], [num(top10.length), t("top10")], [num(bring), t("bringInstalls")], [num(targets), t("targets")],
+    [`<span class="up">${ups}</span> / <span class="down">${downs}</span>`, t("upDown")], [num(auto), t("autoFound")]];
   $("#stats").innerHTML = st.map(([v, l]) => `<div class="stat"><div class="v">${v}</div><div class="l">${l}</div></div>`).join("");
 }
 
@@ -927,8 +956,21 @@ function renderKeywords() {
       </span></td></tr>`).join("")
       : `<tr><td colspan="11" class="muted">${t("emptyKw")}</td></tr>`);
   renderPager("kw");
+  $("#kwCount").textContent = `(${num(KW.length)})`;
   $("#refreshAll").disabled = refreshBusy && !KW.some(k => !busy(k.id));
   $("#refreshAll").classList.toggle("spin", refreshBusy);
+}
+
+function renderOverviewLists() {
+  const ORDER = {high: 0, medium: 1, low: 2};
+  const best = KW.filter(k => k.value_label in ORDER).sort((a, b) => ORDER[a.value_label] - ORDER[b.value_label] || (b.value || 0) - (a.value || 0)).slice(0, 8);
+  const row = (k, last) => `<tr class="click" data-chart-row="${k.id}"><td dir="auto">${esc(k.term)}${k.vip ? `<span class="vip" title="${t("vipBadge")}">⭐</span>` : ""}</td>
+    <td>${flag(k.country)} ${k.country.toUpperCase()}</td><td>${rankCell(k)}</td><td>${last}</td></tr>`;
+  $("#bestTable").innerHTML = best.length ? `<tr><th>${t("keyword")}</th><th>${t("country")}</th><th>${t("rankToday")}</th><th>${t("valueCol")}</th></tr>` + best.map(k => row(k, valueBadge(k))).join("")
+    : `<tr><td class="muted" style="white-space:normal">${t("noBest")}</td></tr>`;
+  const recent = KW.filter(k => k.source === "auto").sort((a, b) => (b.added_at || "").localeCompare(a.added_at || "") || (a.rank || 999) - (b.rank || 999)).slice(0, 8);
+  $("#newTable").innerHTML = recent.length ? `<tr><th>${t("keyword")}</th><th>${t("country")}</th><th>${t("rankToday")}</th><th>${t("addedOn")}</th></tr>` + recent.map(k => row(k, `<span class="muted">${fmtDate(k.added_at)}</span>`)).join("")
+    : `<tr><td class="muted" style="white-space:normal">${t("noNew")}</td></tr>`;
 }
 
 async function showSerp(id) {
@@ -1026,7 +1068,7 @@ function renderStatus(st) {
 }
 
 function renderAll() {
-  renderHeader(); renderSettingsForm(); renderInfo(); renderCharts(); renderStats(); renderKeywords(); renderCandidates(); renderCompetitors(); renderPool(); renderVip();
+  renderHeader(); renderSettingsForm(); renderInfo(); renderCharts(); renderStats(); renderOverviewLists(); renderKeywords(); renderCandidates(); renderCompetitors(); renderPool(); renderVip();
   if (tab === "analysis") renderAnalysis();
   if (openChartId != null) showChart(openChartId);
 }
@@ -1197,6 +1239,17 @@ $("#runFull").onclick = act(async () => {
   } finally { $("#runFull").disabled = false; }
 });
 $("#refreshAll").onclick = () => refreshKeywords(KW.map(k => k.id));
+$("#toggleAdd").onclick = () => { $("#addPanel").classList.toggle("hidden"); if (!$("#addPanel").classList.contains("hidden")) $("#newTerms").focus(); };
+function goTab(tb) { document.querySelector(`#tabs button[data-tab="${tb}"]`).click(); window.scrollTo({top: 0, behavior: "smooth"}); }
+document.addEventListener("click", e => {
+  const g = e.target.closest("[data-goto]"); if (g) return goTab(g.dataset.goto);
+  const r = e.target.closest("[data-chart-row]"); if (r) { chartShowTable = false; showChart(+r.dataset.chartRow); }
+});
+$("#discNav").onclick = e => {
+  const sub = e.target.closest("button")?.dataset.sub; if (!sub) return;
+  document.querySelectorAll("#discNav button").forEach(b => b.classList.toggle("on", b.dataset.sub === sub));
+  document.querySelectorAll("#tab-discovery .sub").forEach(c => c.classList.toggle("hidden", c.id !== "sub-" + sub));
+};
 $("#infoCountry").onchange = renderInfo;
 const kwFirst = () => { PAGERS.kw.page = 1; renderKeywords(); }, cdFirst = () => { PAGERS.cd.page = 1; renderCandidates(); };
 ["#kwCountry", "#kwSource", "#kwRanked"].forEach(s => $(s).onchange = kwFirst);
