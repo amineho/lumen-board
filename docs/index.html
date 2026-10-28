@@ -88,6 +88,12 @@ tr.busy td { background: var(--accent-soft); }
 .vbadge.medium { background: var(--accent-soft); color: var(--accent); }
 .vbadge.low { background: var(--line); color: var(--muted); }
 .vbadge.target { background: var(--warn-soft); color: var(--warn); }
+.chip { display: inline-block; padding: 1px 8px; margin: 2px; border-radius: 99px; font-size: 12px; border: 1px solid var(--line); color: var(--text); }
+.chip.ranked { background: var(--good-soft); color: var(--good); border-color: transparent; font-weight: 600; }
+.chip.tracked { background: var(--accent-soft); color: var(--accent); border-color: transparent; }
+.chip.tested { color: var(--muted); border-style: dashed; }
+td.wrap { white-space: normal; min-width: 280px; }
+.legend { display: flex; flex-wrap: wrap; gap: 4px 12px; align-items: center; margin-bottom: 10px; font-size: 12px; color: var(--muted); }
 .up { color: var(--good); } .down { color: var(--bad); } .muted { color: var(--muted); }
 .yes { color: var(--good); } .no { color: var(--muted); }
 textarea, input, select { font: inherit; color: var(--text); background: var(--bg); border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px; width: 100%; }
@@ -195,6 +201,7 @@ code { font: 12px ui-monospace, Menlo, Consolas, monospace; direction: ltr; unic
     <button data-tab="overview" class="on" data-i18n="tabOverview"></button>
     <button data-tab="keywords" data-i18n="tabKeywords"></button>
     <button data-tab="discovery" data-i18n="tabDiscovery"></button>
+    <button data-tab="competitors" data-i18n="tabCompetitors"></button>
     <button data-tab="analysis" data-i18n="tabAnalysis"></button>
     <button data-tab="charts" data-i18n="tabCharts"></button>
     <button data-tab="settings" data-i18n="tabSettings"></button>
@@ -263,6 +270,17 @@ code { font: 12px ui-monospace, Menlo, Consolas, monospace; direction: ltr; unic
           <option value="" data-i18n="all"></option><option value="1" data-i18n="rankedOk"></option><option value="0" data-i18n="notRanking"></option></select></div>
       </div>
       <div class="tablewrap"><table id="cdTable"></table></div>
+    </div>
+  </section>
+
+  <!-- COMPETITORS -->
+  <section id="tab-competitors" class="hidden">
+    <div class="card">
+      <h2 data-i18n="compTitle"></h2>
+      <div class="muted" style="margin-bottom:10px" data-i18n="compHelp"></div>
+      <div class="row" style="margin-bottom:10px"><div style="max-width:200px"><select id="coCountry" aria-label="Country"></select></div></div>
+      <div class="legend" id="coLegend"></div>
+      <div class="tablewrap"><table id="coTable"></table></div>
     </div>
   </section>
 
@@ -361,6 +379,11 @@ const I18N = {
     vHigh: "High", vMedium: "Medium", vLow: "Low", vNone: "None", vTarget: "Target",
     estNote: "Popularity, difficulty and value are estimates built from the top 10 apps for each keyword and their ratings, because Apple does not publish search volumes. Value combines popularity with your position: <b>High</b> means the keyword likely brings you installs, <b>Target</b> means you don't rank yet but it looks popular and beatable.",
     bringInstalls: "Bring installs (est.)", targets: "Targets",
+    tabCompetitors: "Competitors", compTitle: "Your main competitors",
+    compHelp: "Games in your category that appear most often in the top 10 of your keywords. Their keywords come from their name and description, because the App Store Connect keyword field is private. Every day the tracker tests your game on these keywords and adds the ones where it ranks.",
+    appearsIn: "In your keywords", avgPos: "Avg. position", theirKw: "Their keywords",
+    lgRanked: "you rank", lgTracked: "tracked, not ranking", lgTested: "tested, not ranking", lgNew: "not tested yet",
+    emptyCo: "No competitor data yet. It appears after the next full check.", oCompApp: "Competitor: {name}", stCompetitors: "Competitors ({c})",
     refreshKw: "Refresh rank", chartKw: "Rank history", del: "Remove", confirmDelete: "Remove this keyword?",
     emptyKw: "No keywords yet. Add some above or run a full check.",
     serpTitle: "Top 10 for “{k}”", app: "App",
@@ -430,6 +453,11 @@ const I18N = {
     vHigh: "مرتفعة", vMedium: "متوسطة", vLow: "منخفضة", vNone: "لا شيء", vTarget: "فرصة",
     estNote: "الشعبية والصعوبة والقيمة تقديرات مبنية على أفضل 10 تطبيقات لكل كلمة مفتاحية وعدد تقييماتها، لأن Apple لا تنشر أحجام البحث. تجمع القيمة بين الشعبية وترتيبك: <b>مرتفعة</b> تعني أن الكلمة تجلب لك تثبيتات على الأرجح، و<b>فرصة</b> تعني أنك لا تظهر فيها بعد لكنها تبدو شائعة ويمكن المنافسة عليها.",
     bringInstalls: "تجلب تثبيتات (تقديريًا)", targets: "فرص",
+    tabCompetitors: "المنافسون", compTitle: "أبرز منافسيك",
+    compHelp: "ألعاب من فئتك تظهر أكثر من غيرها في أفضل 10 نتائج لكلماتك المفتاحية. كلماتها المفتاحية مستخرجة من اسمها ووصفها، لأن حقل الكلمات المفتاحية في App Store Connect خاص. يختبر المتتبّع لعبتك يوميًا على هذه الكلمات ويضيف التي تظهر فيها.",
+    appearsIn: "في كلماتك المفتاحية", avgPos: "متوسط الترتيب", theirKw: "كلماتهم المفتاحية",
+    lgRanked: "تظهر فيها", lgTracked: "مُتتبَّعة ولا تظهر", lgTested: "اختُبرت ولا تظهر", lgNew: "لم تُختبر بعد",
+    emptyCo: "لا توجد بيانات عن المنافسين بعد. ستظهر بعد الفحص الكامل القادم.", oCompApp: "منافس: {name}", stCompetitors: "المنافسون ({c})",
     refreshKw: "تحديث الترتيب", chartKw: "سجل الترتيب", del: "حذف", confirmDelete: "هل تريد حذف هذه الكلمة المفتاحية؟",
     emptyKw: "لا توجد كلمات مفتاحية بعد. أضف بعضها في الأعلى أو شغّل فحصًا كاملًا.",
     serpTitle: "أفضل 10 نتائج لـ «{k}»", app: "التطبيق",
@@ -494,6 +522,7 @@ const fmtDateTime = d => d ? fmtDate(d, {day: "numeric", month: "short", hour: "
 const num = n => (n ?? 0).toLocaleString(locale());
 function originLabel(o) {
   o = LEGACY_ORIGINS[o] || o || "";
+  if (o.startsWith("competitor:")) return t("oCompApp", {name: o.slice(11)});
   const m = o.match(/^(?:competitors:|concurrents \()(\d+)/);
   if (m) return t("oComp", {n: m[1]});
   return {my_keywords: t("oMy"), own_title: t("oOwn"), description: t("oDesc"), combo: t("oCombo")}[o] || o;
@@ -502,7 +531,7 @@ function stepLabel(step) {
   if (!step) return "";
   const [kind, rest = ""] = step.split(/:(.*)/s);
   const [k, c] = rest.includes("|") ? [rest.slice(0, rest.lastIndexOf("|")), rest.slice(rest.lastIndexOf("|") + 1)] : ["", rest];
-  return {info: t("stInfo", {c}), charts: t("stCharts", {c}), keyword: t("stKeyword", {k: bdi(k), c}), discovery: t("stDiscovery", {k: bdi(k), c}), done: t("stDone")}[kind] || esc(step);
+  return {info: t("stInfo", {c}), charts: t("stCharts", {c}), competitors: t("stCompetitors", {c}), keyword: t("stKeyword", {k: bdi(k), c}), discovery: t("stDiscovery", {k: bdi(k), c}), done: t("stDone")}[kind] || esc(step);
 }
 
 const ICONS = {
@@ -523,7 +552,7 @@ const GH = {
 const actionsUrl = () => `https://github.com/${GH.repo()}/actions`;
 const ghLink = (url = actionsUrl(), key = "follow") => `<a href="${esc(url)}" target="_blank" rel="noopener">${t(key)}</a>`;
 
-let S = null, KW = [], CD = [], tab = "overview";
+let S = null, KW = [], CD = [], CO = {}, tab = "overview";
 let staticCache = {};
 
 async function ghApi(path, opts = {}) {
@@ -616,6 +645,7 @@ async function api(p, body) {
     if (u.pathname === "/api/state") return staticGet("state.json");
     if (u.pathname === "/api/keywords") return (await staticGet("keywords.json")) || [];
     if (u.pathname === "/api/candidates") return (await staticGet("candidates.json")) || [];
+    if (u.pathname === "/api/competitors") return (await staticGet("competitors.json")) || {};
     if (u.pathname === "/api/serp") return ((await staticGet("serp.json")) || {})[u.searchParams.get("id")] || {apps: []};
     if (u.pathname === "/api/analysis") return ((await staticGet("analysis.json")) || {})[u.searchParams.get("country")] || {words: [], sample: 0};
   }
@@ -716,7 +746,7 @@ function renderHeader() {
 }
 function renderSettingsForm() {
   const cc = S.config.countries;
-  [["#infoCountry"], ["#kwCountry", 1], ["#cdCountry", 1], ["#anCountry"]].forEach(([s, a]) => fillCountrySelect($(s), a));
+  [["#infoCountry"], ["#kwCountry", 1], ["#cdCountry", 1], ["#anCountry"], ["#coCountry"]].forEach(([s, a]) => fillCountrySelect($(s), a));
   const checked = new Set([...document.querySelectorAll("#addCountries input:checked")].map(i => i.value));
   $("#addCountries").innerHTML = cc.map(c => `<label><input type="checkbox" value="${c}" ${!checked.size || checked.has(c) ? "checked" : ""}> ${flag(c)} ${c.toUpperCase()}</label>`).join("");
   if (!$("#cfgApp").dataset.filled) {
@@ -800,6 +830,19 @@ function renderCandidates() {
       : `<tr><td colspan="5" class="muted">${t("emptyCd")}</td></tr>`);
 }
 
+function renderCompetitors() {
+  const c = $("#coCountry").value, rows = (CO || {})[c] || [];
+  $("#coLegend").innerHTML = [["ranked", "lgRanked"], ["tracked", "lgTracked"], ["tested", "lgTested"], ["", "lgNew"]]
+    .map(([cls, k]) => `<span><span class="chip ${cls}">abc</span> ${t(k)}</span>`).join("");
+  const chip = x => `<span class="chip ${x.status === "new" ? "" : x.status}" dir="auto">${esc(x.term)}${x.rank ? ` #${x.rank}` : ""}</span>`;
+  $("#coTable").innerHTML = `<tr><th>#</th><th>${t("app")}</th><th>${t("ratings")}</th><th>${t("appearsIn")}</th><th>${t("avgPos")}</th><th>${t("theirKw")}</th></tr>` +
+    (rows.length ? rows.map((a, i) => `<tr><td>${i + 1}</td>
+      <td dir="auto"><a href="${esc(a.url || `https://apps.apple.com/${c}/app/id${a.app_id}`)}" target="_blank" rel="noopener">${esc(a.name)}</a></td>
+      <td>${a.ratings == null ? "—" : num(a.ratings)}</td><td>${num(a.appearances)}</td><td>#${a.avg_pos}</td>
+      <td class="wrap">${a.terms.map(chip).join("")}</td></tr>`).join("")
+      : `<tr><td colspan="6" class="muted">${t("emptyCo")}</td></tr>`);
+}
+
 async function renderAnalysis() {
   const c = $("#anCountry").value; if (!c) return;
   const d = await api("/api/analysis?country=" + c);
@@ -834,7 +877,7 @@ function renderStatus(st) {
 }
 
 function renderAll() {
-  renderHeader(); renderSettingsForm(); renderInfo(); renderCharts(); renderStats(); renderKeywords(); renderCandidates();
+  renderHeader(); renderSettingsForm(); renderInfo(); renderCharts(); renderStats(); renderKeywords(); renderCandidates(); renderCompetitors();
   if (tab === "analysis") renderAnalysis();
   if (openChartId != null) showChart(openChartId);
 }
@@ -842,7 +885,7 @@ function renderAll() {
 async function loadAll() {
   staticCache = {};
   await loadState();
-  [KW, CD] = await Promise.all([api("/api/keywords"), api("/api/candidates")]);
+  [KW, CD, CO] = await Promise.all([api("/api/keywords"), api("/api/candidates"), api("/api/competitors")]);
   renderAll();
   renderStatus(S.status);
 }
@@ -1010,6 +1053,7 @@ $("#infoCountry").onchange = renderInfo;
 $("#kwSearch").oninput = renderKeywords;
 ["#cdCountry", "#cdRanked"].forEach(s => $(s).onchange = renderCandidates);
 $("#anCountry").onchange = renderAnalysis;
+$("#coCountry").onchange = renderCompetitors;
 $("#kwTable").onclick = act(async e => {
   const btn = e.target.closest("button");
   if (btn?.dataset.refresh) { e.stopPropagation(); return refreshKeywords([+btn.dataset.refresh]); }

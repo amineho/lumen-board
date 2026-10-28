@@ -38,7 +38,7 @@ DEFAULT_CONFIG = {
     "countries": ["us", "gb", "ca", "au", "fr", "de", "ma", "sa"],
     "port": 8080,
     "daily_hour": 9,
-    "candidates_per_run": 25,
+    "candidates_per_run": 40,
     "my_keywords": "",
     # keywords li kantba3o: "term" = f kol l bldan, "term|us" = f bled wa7d
     "manual_keywords": [],
@@ -58,6 +58,8 @@ der die das und mit für ein eine il lo gli di per con
 TRADEMARKS = set("""
 nba wnba nfl nhl mlb ncaa fifa uefa espn ea 2k 2k24 2k25 2k26 2k27 roblox minecraft fortnite pokemon
 disney marvel nike adidas jordan lebron curry kobe messi ronaldo tiktok youtube instagram
+nbpa durant harden doncic dončić luka giannis antetokounmpo embiid jokic tatum wembanyama stephen kevin james
+miniclip supercell rovio voodoo
 """.split())
 
 
@@ -133,6 +135,18 @@ def init_db():
             PRIMARY KEY (date, country)
         );
         CREATE TABLE IF NOT EXISTS meta (key TEXT PRIMARY KEY, value TEXT);
+        CREATE TABLE IF NOT EXISTS competitors (
+            date TEXT NOT NULL,
+            country TEXT NOT NULL,
+            app_id TEXT NOT NULL,
+            name TEXT,
+            ratings INTEGER,
+            appearances INTEGER,
+            avg_pos REAL,
+            url TEXT,
+            terms TEXT,
+            PRIMARY KEY (date, country, app_id)
+        );
         """)
 
 
@@ -300,6 +314,86 @@ def market_subtitles(country):
     return json.loads(raw)
 
 
+COMPETITORS_PER_COUNTRY = 12
+# kalimat 3amma bzzaf f descriptions dyal games, ma kayswawch ka keywords
+DESC_STOP = set("""
+player players level levels time world way make need also each every feature features download experience enjoy
+easy simple amazing awesome addictive graphics hours friends start keep right first next take give become much many
+better great ever like love only own real really very want will with without game's app's please support email contact
+terms privacy policy subscription purchase purchases price account itunes period renewal automatically charged
+http https www com net payment payments them they their these those this that what when where which while from into
+about more most other such than then there here anytime everyone anyone something available required includes include
+upon still feel able through against around forward who down high end cancel service cycle apple template api
+licensed membership information continue stay different unique special bigger impressive extended successful
+""".split())
+
+
+def competitor_terms(name, description):
+    """Keywords li kaybano f smiya o description dyal concurrent (keywords dyal App Store Connect makhfiyin)."""
+    c = Counter()
+    for w in tokens(name, split_dots=False):
+        c[w] += 3
+    for ph in phrases(name, 2):
+        c[ph] += 3
+    desc = (description or "")[:4000]
+    for w, n in Counter(tokens(desc, split_dots=False)).items():
+        if n >= 2:
+            c[w] += min(n, 6) * 0.5
+    for ph, n in Counter(phrases(desc, 2)).items():
+        if n >= 2:
+            c[ph] += n
+    out = []
+    for term, _ in c.most_common():
+        words = term.split()
+        if "." in term or "/" in term or any(w in DESC_STOP or w in TRADEMARKS or w.isdigit() for w in words):
+            continue
+        out.append(term)
+        if len(out) == 25:
+            break
+    return out
+
+
+def analyze_competitors(country, app_id, d):
+    """Concurrents = apps (nefs category dyal app) li kaybano bzzaf f top 10 dyal keywords dyalna."""
+    with db() as con:
+        rows = con.execute("""SELECT s.app_id, s.name, s.ratings, s.pos FROM serp s JOIN keywords k ON k.id = s.keyword_id
+                              WHERE k.country = ? AND s.date = (SELECT MAX(date) FROM serp WHERE keyword_id = s.keyword_id)""",
+                           (country,)).fetchall()
+        own = con.execute("SELECT data FROM app_info WHERE country=? ORDER BY date DESC LIMIT 1", (country,)).fetchone()
+    own_genre = (json.loads(own["data"]).get("genre_ids") or [None])[0] if own else None
+    stats = {}
+    for r in rows:
+        if r["app_id"] == app_id:
+            continue
+        st = stats.setdefault(r["app_id"], {"n": 0, "pos": 0})
+        st["n"] += 1
+        st["pos"] += r["pos"]
+    top = sorted(stats, key=lambda a: (-stats[a]["n"], stats[a]["pos"] / stats[a]["n"]))[:40]
+    info = lookup(top, country) if top else {}
+    kept = 0
+    with db() as con:
+        con.execute("DELETE FROM competitors WHERE date=? AND country=?", (d, country))
+        for aid in top:
+            r = info.get(aid)
+            if not r or (own_genre and str(r.get("primaryGenreId")) != str(own_genre)):
+                continue
+            st = stats[aid]
+            con.execute("INSERT INTO competitors VALUES (?,?,?,?,?,?,?,?,?)", (
+                d, country, aid, r.get("trackName"), r.get("userRatingCount"), st["n"], round(st["pos"] / st["n"], 1),
+                r.get("trackViewUrl"), json.dumps(competitor_terms(r.get("trackName", ""), r.get("description", "")))))
+            kept += 1
+            if kept == COMPETITORS_PER_COUNTRY:
+                break
+    return kept
+
+
+def latest_competitors(country):
+    with db() as con:
+        return [dict(r) for r in con.execute("""SELECT * FROM competitors WHERE country=? AND
+                    date=(SELECT MAX(date) FROM competitors WHERE country=?) ORDER BY appearances DESC, avg_pos""",
+                    (country, country))]
+
+
 def generate_candidates(country, cfg):
     title_text, description = own_text(country)
     my_kw = [k.strip().lower() for k in re.split(r"[,\n]", cfg.get("my_keywords", "")) if k.strip()]
@@ -336,6 +430,13 @@ def generate_candidates(country, cfg):
     for w, c in desc_words.most_common(25):
         if c >= 2:
             add(w, 15 + c * 2, "description")
+    comp_terms, comp_name = Counter(), {}
+    for comp in latest_competitors(country):
+        for term in json.loads(comp["terms"] or "[]"):
+            comp_terms[term] += 1
+            comp_name.setdefault(term, comp["name"])
+    for term, c in comp_terms.most_common(120):
+        add(term, 30 + c * 8, f"competitor:{comp_name[term]}" if c == 1 else f"competitors:{c}")
     core = sorted((w for w in own_words if "." not in w), key=lambda w: -market_uni[w])[:6]
     for a in core:
         for b, c in market_uni.most_common(15):
@@ -395,7 +496,7 @@ def run_job(discover=True, only_country=None, keyword_ids=None):
                 kws = con.execute("SELECT * FROM keywords WHERE country IN (%s)" % ",".join("?" * len(countries)),
                                   countries).fetchall()
         n_cand = cfg["candidates_per_run"] if discover and not keywords_only else 0
-        STATUS["total"] = len(kws) + (0 if keywords_only else len(countries) * (2 + 3 + n_cand))
+        STATUS["total"] = len(kws) + (0 if keywords_only else len(countries) * (2 + 3 + 1 + n_cand))
 
         # 1. ma3lomat 3la app
         genres = ["6014"]
@@ -455,7 +556,16 @@ def run_job(discover=True, only_country=None, keyword_ids=None):
                 log(f"'{k['term']}' {k['country']}: {e}")
             STATUS["done"] += 1
 
-        # 4. discovery: keywords jdad
+        # 4. concurrents: chkoun kaybano m3ana o chno keywords dyalhom
+        for cc in [] if keywords_only else countries:
+            STATUS["step"] = f"competitors:{cc.upper()}"
+            try:
+                analyze_competitors(cc, app_id, d)
+            except Exception as e:
+                log(f"{cc.upper()} competitors: {e}")
+            STATUS["done"] += 1
+
+        # 5. discovery: keywords jdad
         found = 0
         for cc in countries:
             if not n_cand:
@@ -602,6 +712,28 @@ def api_serp(keyword_id):
     return {"date": row["d"], "apps": [dict(r) for r in rows]}
 
 
+def api_competitors():
+    """Kol concurrent m3a keywords dyalo o status dyal app dyalna f kol wa7d."""
+    out = {}
+    with db() as con:
+        kw_rank = {}
+        for r in con.execute("""SELECT k.term, k.country, r.rank FROM keywords k LEFT JOIN ranks r ON r.keyword_id = k.id
+                                AND r.date = (SELECT MAX(date) FROM ranks WHERE keyword_id = k.id)"""):
+            kw_rank[(r["term"], r["country"])] = r["rank"]
+        tested = {(r["term"], r["country"]) for r in con.execute("SELECT term, country FROM candidates")}
+    for cc in load_config()["countries"]:
+        comps = latest_competitors(cc)
+        for comp in comps:
+            terms = []
+            for term in json.loads(comp.pop("terms") or "[]"):
+                key = (term, cc)
+                status = "ranked" if kw_rank.get(key) else "tracked" if key in kw_rank else "tested" if key in tested else "new"
+                terms.append({"term": term, "status": status, "rank": kw_rank.get(key)})
+            comp["terms"] = terms
+        out[cc] = comps
+    return out
+
+
 def api_candidates():
     with db() as con:
         return [dict(r) for r in con.execute("SELECT * FROM candidates ORDER BY tested_at DESC, rank IS NULL, rank LIMIT 500")]
@@ -657,6 +789,8 @@ class Handler(BaseHTTPRequestHandler):
             return self.send(api_keywords())
         if u.path == "/api/serp":
             return self.send(api_serp(int(q["id"][0])))
+        if u.path == "/api/competitors":
+            return self.send(api_competitors())
         if u.path == "/api/candidates":
             return self.send(api_candidates())
         if u.path == "/api/analysis":
@@ -753,6 +887,7 @@ def export_static():
         "state.json": state,
         "keywords.json": keywords,
         "candidates.json": api_candidates(),
+        "competitors.json": api_competitors(),
         "serp.json": {str(k["id"]): api_serp(k["id"]) for k in keywords},
         "analysis.json": {cc: api_analysis(cc) for cc in state["config"]["countries"]},
     }

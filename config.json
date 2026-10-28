@@ -3,7 +3,7 @@
   "countries": ["us", "gb", "ca", "au", "fr", "de", "ma", "sa"],
   "port": 8080,
   "daily_hour": 9,
-  "candidates_per_run": 25,
+  "candidates_per_run": 40,
   "my_keywords": "",
   "manual_keywords": ["basketball.io", "basketball game", "slam dunk", "streetball", "basketball", "hoops", "5v5 basketball"],
   "removed_keywords": []
