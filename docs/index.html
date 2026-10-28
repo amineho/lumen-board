@@ -88,6 +88,7 @@ tr.busy td { background: var(--accent-soft); }
 .vbadge.medium { background: var(--accent-soft); color: var(--accent); }
 .vbadge.low { background: var(--line); color: var(--muted); }
 .vbadge.target { background: var(--warn-soft); color: var(--warn); }
+.vip { color: #d4a017; margin-inline-start: 4px; }
 .chip { display: inline-block; padding: 1px 8px; margin: 2px; border-radius: 99px; font-size: 12px; border: 1px solid var(--line); color: var(--text); }
 .chip.ranked { background: var(--good-soft); color: var(--good); border-color: transparent; font-weight: 600; }
 .chip.tracked { background: var(--accent-soft); color: var(--accent); border-color: transparent; }
@@ -250,7 +251,7 @@ code { font: 12px ui-monospace, Menlo, Consolas, monospace; direction: ltr; unic
       <div class="row" style="margin-bottom:10px">
         <div><label for="kwCountry" data-i18n="country"></label><select id="kwCountry"></select></div>
         <div><label for="kwSource" data-i18n="source"></label><select id="kwSource">
-          <option value="" data-i18n="all"></option><option value="manual" data-i18n="srcManual"></option><option value="auto" data-i18n="srcAuto"></option></select></div>
+          <option value="" data-i18n="all"></option><option value="manual" data-i18n="srcManual"></option><option value="auto" data-i18n="srcAuto"></option><option value="vip" data-i18n="srcVip"></option></select></div>
         <div><label for="kwRanked" data-i18n="rankF"></label><select id="kwRanked">
           <option value="" data-i18n="all"></option><option value="1" data-i18n="onlyRanked"></option><option value="0" data-i18n="onlyNot"></option></select></div>
         <div><label for="kwSearch" data-i18n="search"></label><input id="kwSearch" dir="auto" data-i18n-ph="searchPh"></div>
@@ -279,6 +280,20 @@ code { font: 12px ui-monospace, Menlo, Consolas, monospace; direction: ltr; unic
       </div>
       <div class="tablewrap"><table id="cdTable"></table></div>
       <div class="pager" id="cdPager" data-pager="cd"></div>
+    </div>
+    <div class="card">
+      <h2 data-i18n="vipTitle"></h2>
+      <div class="muted" style="margin-bottom:10px" data-i18n="vipHelp"></div>
+      <div class="row" style="margin-bottom:10px">
+        <div style="max-width:200px"><select id="vsCountry" aria-label="Country"></select></div>
+        <div style="max-width:220px"><select id="vsStatus" aria-label="Status">
+          <option value="" data-i18n="all"></option><option value="ranked" data-i18n="lgRanked"></option>
+          <option value="tested" data-i18n="lgTested"></option><option value="new" data-i18n="lgNew"></option></select></div>
+        <div><input id="vsSearch" dir="auto" data-i18n-ph="searchPh" aria-label="Search"></div>
+      </div>
+      <div class="grid" id="vipStats"></div>
+      <div class="tablewrap"><table id="vsTable"></table></div>
+      <div class="pager" id="vsPager" data-pager="vs"></div>
     </div>
     <div class="card">
       <h2 data-i18n="poolTitle"></h2>
@@ -399,6 +414,11 @@ const I18N = {
     vHigh: "High", vMedium: "Medium", vLow: "Low", vNone: "None", vTarget: "Target",
     estNote: "Popularity, difficulty and value are estimates built from the top 10 apps for each keyword and their ratings, because Apple does not publish search volumes. Value combines popularity with your position: <b>High</b> means the keyword likely brings you installs, <b>Target</b> means you don't rank yet but it looks popular and beatable.",
     bringInstalls: "Bring installs (est.)", targets: "Targets",
+    vipTitle: "App Store search suggestions ⭐ VIP",
+    vipHelp: "The words App Store suggests while people type in search (autocomplete). Apple shows them because many people search for them, so they are the most valuable keywords. Every hour the tracker types hundreds of searches (keyword starts, keyword + letter, and every suggestion it finds), stores all suggestions and tests your game on them before anything else, again every 3 days. Score: higher when the suggestion appears for a short search and near the top.",
+    vipCount: "Suggestions", vipSearches: "Searches done", score: "Score", fromSearch: "Found by typing", firstSeen: "First seen",
+    srcVip: "Apple suggestions ⭐", oVip: "Apple suggestion · “{q}”", stSuggest: "App Store suggestions ({c})", vipBadge: "Apple suggests this search",
+    emptyVip: "No suggestions yet. They are collected every hour.",
     poolTitle: "Keyword pool (snowball)",
     poolHelp: "For every keyword where your game is in the top 10, the tracker saves the top 10 games for it (once per app) and stores all their keywords in every language of the country. It tests your game on these keywords every day: never-tested first, then older ones again. Keywords where your game ranks are added to your list, and their top 10 games feed the pool in turn.",
     poolApps: "Apps in the pool", poolTerms: "Keywords in the pool", poolTested: "Tested", poolRanked: "Your game ranks",
@@ -479,6 +499,11 @@ const I18N = {
     vHigh: "مرتفعة", vMedium: "متوسطة", vLow: "منخفضة", vNone: "لا شيء", vTarget: "فرصة",
     estNote: "الشعبية والصعوبة والقيمة تقديرات مبنية على أفضل 10 تطبيقات لكل كلمة مفتاحية وعدد تقييماتها، لأن Apple لا تنشر أحجام البحث. تجمع القيمة بين الشعبية وترتيبك: <b>مرتفعة</b> تعني أن الكلمة تجلب لك تثبيتات على الأرجح، و<b>فرصة</b> تعني أنك لا تظهر فيها بعد لكنها تبدو شائعة ويمكن المنافسة عليها.",
     bringInstalls: "تجلب تثبيتات (تقديريًا)", targets: "فرص",
+    vipTitle: "اقتراحات البحث في App Store ⭐ VIP",
+    vipHelp: "الكلمات التي يقترحها App Store أثناء كتابة الناس في البحث (الإكمال التلقائي). تعرضها Apple لأن كثيرًا من الناس يبحثون عنها، فهي أثمن الكلمات المفتاحية. يكتب المتتبّع كل ساعة مئات عمليات البحث (بدايات الكلمات، والكلمة مع حرف، وكل اقتراح يجده)، ويخزّن كل الاقتراحات ويختبر لعبتك عليها قبل أي شيء آخر، ثم يعيد اختبارها كل 3 أيام. النتيجة أعلى كلما ظهر الاقتراح لبحث أقصر وفي مرتبة أعلى.",
+    vipCount: "الاقتراحات", vipSearches: "عمليات البحث المنجزة", score: "النتيجة", fromSearch: "ظهر عند كتابة", firstSeen: "أول ظهور",
+    srcVip: "اقتراحات Apple ⭐", oVip: "اقتراح Apple · «{q}»", stSuggest: "اقتراحات App Store ({c})", vipBadge: "تقترح Apple هذا البحث",
+    emptyVip: "لا توجد اقتراحات بعد. تُجمع كل ساعة.",
     poolTitle: "مخزون الكلمات (كرة الثلج)",
     poolHelp: "لكل كلمة مفتاحية تكون لعبتك فيها ضمن أفضل 10، يحفظ المتتبّع أفضل 10 ألعاب فيها (مرة واحدة لكل تطبيق) ويخزّن كل كلماتها المفتاحية بجميع لغات الدولة. ثم يختبر لعبتك على هذه الكلمات يوميًا: التي لم تُختبر أولًا، ثم القديمة من جديد. الكلمات التي تظهر فيها لعبتك تُضاف إلى قائمتك، وتغذّي أفضل 10 ألعاب فيها المخزون بدورها.",
     poolApps: "تطبيقات في المخزون", poolTerms: "كلمات في المخزون", poolTested: "اختُبرت", poolRanked: "تظهر فيها لعبتك",
@@ -557,6 +582,7 @@ function originLabel(o) {
   if (o.startsWith("competitor:")) return t("oCompApp", {name: o.slice(11)});
   if (o.startsWith("seed:")) return t("oSeed", {lang: o.slice(5).toUpperCase()});
   if (o.startsWith("pool:")) return t("oPool", {name: o.slice(5)});
+  if (o.startsWith("vip:")) return t("oVip", {q: o.slice(4)});
   const m = o.match(/^(?:competitors:|concurrents \()(\d+)/);
   if (m) return t("oComp", {n: m[1]});
   return {my_keywords: t("oMy"), own_title: t("oOwn"), description: t("oDesc"), combo: t("oCombo")}[o] || o;
@@ -565,7 +591,7 @@ function stepLabel(step) {
   if (!step) return "";
   const [kind, rest = ""] = step.split(/:(.*)/s);
   const [k, c] = rest.includes("|") ? [rest.slice(0, rest.lastIndexOf("|")), rest.slice(rest.lastIndexOf("|") + 1)] : ["", rest];
-  return {info: t("stInfo", {c}), charts: t("stCharts", {c}), competitors: t("stCompetitors", {c}), pool: t("stPool", {c}), keyword: t("stKeyword", {k: bdi(k), c}), discovery: t("stDiscovery", {k: bdi(k), c}), done: t("stDone")}[kind] || esc(step);
+  return {info: t("stInfo", {c}), charts: t("stCharts", {c}), competitors: t("stCompetitors", {c}), pool: t("stPool", {c}), suggest: t("stSuggest", {c}), keyword: t("stKeyword", {k: bdi(k), c}), discovery: t("stDiscovery", {k: bdi(k), c}), done: t("stDone")}[kind] || esc(step);
 }
 
 const ICONS = {
@@ -586,7 +612,7 @@ const GH = {
 const actionsUrl = () => `https://github.com/${GH.repo()}/actions`;
 const ghLink = (url = actionsUrl(), key = "follow") => `<a href="${esc(url)}" target="_blank" rel="noopener">${t(key)}</a>`;
 
-let S = null, KW = [], CD = [], CO = {}, PO = {}, tab = "overview";
+let S = null, KW = [], CD = [], CO = {}, PO = {}, VS = {}, tab = "overview";
 let staticCache = {};
 
 async function ghApi(path, opts = {}) {
@@ -687,6 +713,7 @@ async function api(p, body) {
     if (u.pathname === "/api/candidates") return (await staticGet("candidates.json")) || [];
     if (u.pathname === "/api/competitors") return (await staticGet("competitors.json")) || {};
     if (u.pathname === "/api/pool") return (await staticGet("pool.json")) || {};
+    if (u.pathname === "/api/suggestions") return (await staticGet("suggestions.json")) || {};
     if (u.pathname === "/api/serp") return ((await staticGet("serp.json")) || {})[u.searchParams.get("id")] || {apps: []};
     if (u.pathname === "/api/analysis") return ((await staticGet("analysis.json")) || {})[u.searchParams.get("country")] || {words: [], sample: 0};
   }
@@ -787,7 +814,7 @@ function renderHeader() {
 }
 function renderSettingsForm() {
   const cc = S.config.countries;
-  [["#infoCountry"], ["#kwCountry", 1], ["#cdCountry", 1], ["#anCountry"], ["#coCountry"], ["#paCountry"]].forEach(([s, a]) => fillCountrySelect($(s), a));
+  [["#infoCountry"], ["#kwCountry", 1], ["#cdCountry", 1], ["#anCountry"], ["#coCountry"], ["#paCountry"], ["#vsCountry"]].forEach(([s, a]) => fillCountrySelect($(s), a));
   const checked = new Set([...document.querySelectorAll("#addCountries input:checked")].map(i => i.value));
   $("#addCountries").innerHTML = cc.map(c => `<label><input type="checkbox" value="${c}" ${!checked.size || checked.has(c) ? "checked" : ""}> ${flag(c)} ${c.toUpperCase()}</label>`).join("");
   if (!$("#cfgApp").dataset.filled) {
@@ -835,10 +862,12 @@ const PAGERS = {
   kw: {page: 1, size: +store.get("aso_size_kw") || 50, render: () => renderKeywords()},
   cd: {page: 1, size: +store.get("aso_size_cd") || 50, render: () => renderCandidates()},
   pa: {page: 1, size: +store.get("aso_size_pa") || 25, render: () => renderPool()},
+  vs: {page: 1, size: +store.get("aso_size_vs") || 50, render: () => renderVip()},
 };
 if (store.get("aso_size_kw") === "0") PAGERS.kw.size = 0;
 if (store.get("aso_size_cd") === "0") PAGERS.cd.size = 0;
 if (store.get("aso_size_pa") === "0") PAGERS.pa.size = 0;
+if (store.get("aso_size_vs") === "0") PAGERS.vs.size = 0;
 function pageSlice(id, rows) {
   const P = PAGERS[id], pages = P.size ? Math.max(1, Math.ceil(rows.length / P.size)) : 1;
   P.page = Math.min(Math.max(1, P.page), pages);
@@ -878,7 +907,7 @@ document.addEventListener("change", e => {
 let kwSort = {key: "rank", dir: 1};
 function renderKeywords() {
   const c = $("#kwCountry").value, src = $("#kwSource").value, rk = $("#kwRanked").value, q = $("#kwSearch").value.toLowerCase();
-  const rows = KW.filter(k => (!c || k.country === c) && (!src || k.source === src) && (rk === "" || !!k.rank === (rk === "1")) && (!q || k.term.includes(q)));
+  const rows = KW.filter(k => (!c || k.country === c) && (!src || (src === "vip" ? k.vip : k.source === src)) && (rk === "" || !!k.rank === (rk === "1")) && (!q || k.term.includes(q)));
   const VALUE_ORDER = {high: 5, medium: 4, target: 3, low: 2, none: 1};
   const val = k => kwSort.key === "rank" ? (k.rank || 9999) : kwSort.key === "best" ? (k.best || 9999) : kwSort.key === "change" ? -((k.prev || 999) - (k.rank || 999))
     : kwSort.key === "pop" || kwSort.key === "diff" ? -(k[kwSort.key] ?? -1) : kwSort.key === "value" ? -((VALUE_ORDER[k.value_label] || 0) * 1000 + (k.value || 0)) : k[kwSort.key];
@@ -888,7 +917,7 @@ function renderKeywords() {
   const busy = id => refreshing.has(id) || refreshQueue.has(id);
   $("#kwTable").innerHTML = `<tr>${th("term", t("keyword"))}${th("country", t("country"))}${th("rank", t("rankToday"))}${th("change", t("change"))}${th("best", t("best"))}${th("pop", t("popularity"))}${th("diff", t("difficulty"))}${th("value", t("valueCol"))}<th>${t("last30")}</th>${th("source", t("source"))}<th>${t("actions")}</th></tr>` +
     (shown.length ? shown.map(k => `<tr class="click${busy(k.id) ? " busy" : ""}" data-id="${k.id}">
-      <td dir="auto">${esc(k.term)}</td><td>${flag(k.country)} ${k.country.toUpperCase()}</td><td>${rankCell(k)}</td><td>${delta(k)}</td>
+      <td dir="auto">${esc(k.term)}${k.vip ? `<span class="vip" title="${t("vipBadge")}">⭐</span>` : ""}</td><td>${flag(k.country)} ${k.country.toUpperCase()}</td><td>${rankCell(k)}</td><td>${delta(k)}</td>
       <td>${k.best ? "#" + k.best : "—"}</td><td>${meter(k.pop)}</td><td>${meter(k.diff, "diff")}</td><td>${valueBadge(k)}</td><td>${spark(k.history)}</td>
       <td><span class="badge ${k.source}">${k.source === "auto" ? t("badgeAuto") : t("badgeYou")}</span></td>
       <td><span class="row-actions">
@@ -919,6 +948,23 @@ function renderCandidates() {
     (shown.length ? shown.map(x => `<tr><td dir="auto">${esc(x.term)}</td><td>${flag(x.country)} ${x.country.toUpperCase()}</td><td>${x.rank ? `<span class="rank up">✅ #${x.rank}</span>` : `<span class="muted">${t("notRanking")}</span>`}</td><td class="muted">${esc(originLabel(x.origin))}</td><td class="muted">${fmtDate(x.tested_at)}</td></tr>`).join("")
       : `<tr><td colspan="5" class="muted">${t("emptyCd")}</td></tr>`);
   renderPager("cd");
+}
+
+function renderVip() {
+  const c = $("#vsCountry").value, V = (VS || {})[c] || {items: [], queries: 0, queries_done: 0};
+  const status = x => x.rank ? "ranked" : x.tested_at ? "tested" : "new";
+  const st = $("#vsStatus").value, q = $("#vsSearch").value.toLowerCase();
+  const items = V.items.filter(x => (!st || status(x) === st) && (!q || x.term.includes(q)));
+  $("#vipStats").innerHTML = [[num(V.items.length), t("vipCount")], [`${num(V.queries_done)} / ${num(V.queries)}`, t("vipSearches")],
+    [num(V.items.filter(x => x.tested_at).length), t("poolTested")], [num(V.items.filter(x => x.rank).length), t("poolRanked")]]
+    .map(([v, l]) => `<div class="stat"><div class="v">${v}</div><div class="l">${l}</div></div>`).join("");
+  const shown = pageSlice("vs", items);
+  $("#vsTable").innerHTML = `<tr><th>${t("keyword")}</th><th>${t("score")}</th><th>${t("result")}</th><th>${t("fromSearch")}</th><th>${t("firstSeen")}</th></tr>` +
+    (shown.length ? shown.map(x => `<tr><td dir="auto"><b>${esc(x.term)}</b></td><td>${meter(x.score)}</td>
+      <td>${x.rank ? `<span class="rank up">✅ #${x.rank}</span>` : x.tested_at ? `<span class="muted">${t("notRanking")}</span>` : `<span class="muted">${t("lgNew")}</span>`}</td>
+      <td class="muted" dir="auto">${esc(x.query)}</td><td class="muted">${fmtDate(x.first_seen)}</td></tr>`).join("")
+      : `<tr><td colspan="5" class="muted">${t("emptyVip")}</td></tr>`);
+  renderPager("vs");
 }
 
 function renderPool() {
@@ -980,7 +1026,7 @@ function renderStatus(st) {
 }
 
 function renderAll() {
-  renderHeader(); renderSettingsForm(); renderInfo(); renderCharts(); renderStats(); renderKeywords(); renderCandidates(); renderCompetitors(); renderPool();
+  renderHeader(); renderSettingsForm(); renderInfo(); renderCharts(); renderStats(); renderKeywords(); renderCandidates(); renderCompetitors(); renderPool(); renderVip();
   if (tab === "analysis") renderAnalysis();
   if (openChartId != null) showChart(openChartId);
 }
@@ -988,7 +1034,7 @@ function renderAll() {
 async function loadAll() {
   staticCache = {};
   await loadState();
-  [KW, CD, CO, PO] = await Promise.all([api("/api/keywords"), api("/api/candidates"), api("/api/competitors"), api("/api/pool")]);
+  [KW, CD, CO, PO, VS] = await Promise.all([api("/api/keywords"), api("/api/candidates"), api("/api/competitors"), api("/api/pool"), api("/api/suggestions")]);
   renderAll();
   renderStatus(S.status);
 }
@@ -1159,6 +1205,8 @@ $("#kwSearch").oninput = kwFirst;
 $("#anCountry").onchange = renderAnalysis;
 $("#coCountry").onchange = renderCompetitors;
 $("#paCountry").onchange = () => { PAGERS.pa.page = 1; renderPool(); };
+const vsFirst = () => { PAGERS.vs.page = 1; renderVip(); };
+$("#vsCountry").onchange = vsFirst; $("#vsStatus").onchange = vsFirst; $("#vsSearch").oninput = vsFirst;
 $("#kwTable").onclick = act(async e => {
   const btn = e.target.closest("button");
   if (btn?.dataset.refresh) { e.stopPropagation(); return refreshKeywords([+btn.dataset.refresh]); }

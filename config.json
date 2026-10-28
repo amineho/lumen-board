@@ -29,5 +29,6 @@
   "priority_countries": [
     "us"
   ],
-  "daily_hour_utc": 3
+  "daily_hour_utc": 3,
+  "suggest_per_run": 60
 }

@@ -45,6 +45,8 @@ DEFAULT_CONFIG = {
     "pool_per_run": 0,
     # bldan li kaykmlo discovery dyalhom 9bel lakhrin (b tartib)
     "priority_countries": ["us"],
+    # ch7al mn recherche f autocomplete dyal App Store f kol bled f kol run (bled prioritaire: x2)
+    "suggest_per_run": 60,
     # sa3a (UTC) dyal check kamel f GitHub: 3 = 4 d sba7 f lmaghrib
     "daily_hour_utc": 3,
     # ch7al mn d9i9a y9der ydir run kamel (0 = bla 7ad). Discovery katwe99ef mli ykmel l w9t.
@@ -210,6 +212,22 @@ def init_db():
             lang TEXT,
             PRIMARY KEY (country, term)
         );
+        CREATE TABLE IF NOT EXISTS suggestions (
+            country TEXT NOT NULL,
+            term TEXT NOT NULL,
+            score INTEGER,
+            query TEXT,
+            first_seen TEXT,
+            last_seen TEXT,
+            PRIMARY KEY (country, term)
+        );
+        CREATE TABLE IF NOT EXISTS suggest_queries (
+            country TEXT NOT NULL,
+            query TEXT NOT NULL,
+            done_at TEXT,
+            results INTEGER,
+            PRIMARY KEY (country, query)
+        );
         CREATE TABLE IF NOT EXISTS competitors (
             date TEXT NOT NULL,
             country TEXT NOT NULL,
@@ -254,7 +272,7 @@ _delay = REQUEST_DELAY
 _request_lock = threading.Lock()
 
 
-def fetch(url):
+def fetch(url, headers=None):
     global _last_request, _delay
     for attempt in range(4):
         with _request_lock:
@@ -262,7 +280,7 @@ def fetch(url):
             if wait > 0:
                 time.sleep(wait)
             _last_request = time.time()
-        req = urllib.request.Request(url, headers={"User-Agent": UA, "Accept-Encoding": "gzip"})
+        req = urllib.request.Request(url, headers={"User-Agent": UA, "Accept-Encoding": "gzip", **(headers or {})})
         try:
             with urllib.request.urlopen(req, timeout=30) as r:
                 data = r.read()
@@ -453,6 +471,129 @@ def competitor_terms(name, description, limit=25):
         if len(out) == limit:
             break
     return out
+
+
+# ---------------------------------------------------------------- suggestions dyal App Store (VIP)
+# ID dyal store (storefront) l kol bled: autocomplete dyal App Store kay7taj-h
+STOREFRONTS = {
+    "us": 143441, "gb": 143444, "ca": 143455, "au": 143460, "nz": 143461, "ie": 143449, "fr": 143442, "de": 143443,
+    "it": 143450, "es": 143454, "nl": 143452, "be": 143446, "ch": 143459, "at": 143445, "pt": 143453, "br": 143503,
+    "mx": 143468, "ar": 143505, "co": 143501, "cl": 143483, "pe": 143507, "jp": 143462, "kr": 143466, "cn": 143465,
+    "tw": 143470, "hk": 143463, "sg": 143464, "my": 143473, "id": 143476, "ph": 143474, "th": 143475, "vn": 143471,
+    "in": 143467, "tr": 143480, "ru": 143469, "pl": 143478, "se": 143456, "no": 143457, "dk": 143458, "fi": 143447,
+    "sa": 143479, "ae": 143481, "eg": 143516, "ma": 143620, "dz": 143563, "tn": 143536, "qa": 143498, "kw": 143493,
+    "bh": 143559, "om": 143562, "jo": 143528, "lb": 143497, "il": 143491, "za": 143472, "ng": 143561,
+}
+ALPHABETS = {
+    "ar": "ابتثجحخدذرزسشصضطظعغفقكلمنهوي",
+    "ru": "абвгдежзиклмнопрстуфхцчшэюя",
+}
+LATIN = "abcdefghijklmnopqrstuvwxyz"
+VIP_RETEST_DAYS = 3
+
+
+def suggest(term, country):
+    """Autocomplete dyal App Store: nefs kalimat li kaybano mli nas kayktbo f search (b tartib dyal popularity)."""
+    sf = STOREFRONTS.get(country)
+    if not sf:
+        return []
+    h = fetch("https://search.itunes.apple.com/WebObjects/MZSearchHints.woa/wa/hints?clientApplication=Software&term="
+              + urllib.parse.quote(term), headers={"X-Apple-Store-Front": f"{sf},29"})
+    return [html.unescape(m).strip().lower() for m in re.findall(r"<key>term</key>\s*<string>([^<]*)</string>", h)]
+
+
+def domain_vocab(country):
+    """Kalimat dyal game: seeds dyal lughat dyal bled + smiya/subtitle + keywords li ranké fihom."""
+    seeds = load_seeds()
+    vocab = set()
+    for lang in COUNTRY_SEARCH_LANGS.get(country, ["en"]):
+        for w in seeds.get(lang, []):
+            vocab |= set(tokens(w, split_dots=False))
+    vocab |= set(tokens(own_text(country)[0]))
+    with db() as con:
+        for r in con.execute("""SELECT k.term FROM keywords k JOIN ranks r ON r.keyword_id = k.id
+                AND r.date = (SELECT MAX(date) FROM ranks WHERE keyword_id = k.id) WHERE k.country = ? AND r.rank IS NOT NULL""", (country,)):
+            vocab |= set(tokens(r["term"], split_dots=False))
+    return vocab - DESC_STOP
+
+
+def is_relevant(term, vocab):
+    # kalma kif kif, wla b "s" (dunk/dunks), wla kalma twila b nefs bidaya (basketball/basketballs)
+    long5 = {w[:5] for w in vocab if len(w) >= 6}
+    for tok in tokens(term, split_dots=False):
+        if tok in vocab or tok.rstrip("s") in vocab or tok + "s" in vocab or (len(tok) >= 6 and tok[:5] in long5):
+            return True
+    return False
+
+
+def suggestion_score(query, position):
+    # suggestion li katban b recherche 9siira o f lfo9 = nas kay9elbo 3liha bzzaf
+    return max(1, round(100 - position * 4 - max(0, len(query) - 3) * 1.5))
+
+
+def ensure_suggest_queries(country, cfg):
+    """Kayzid recherches l queue: seeds, bidayat kalimat (bas, bask...), keyword + 7arf (basketball a...)."""
+    seeds = load_seeds()
+    queries = []
+    for lang in COUNTRY_SEARCH_LANGS.get(country, ["en"]):
+        words = seeds.get(lang, [])
+        alphabet = ALPHABETS.get(lang, LATIN if lang in ("en", "fr", "de", "es", "pt", "it", "tr", "id", "nl", "pl") else "")
+        for w in words[:5]:
+            queries += [w[:i] for i in range(3, len(w))]
+        queries += words
+        for w in words[:12]:
+            queries += [f"{w} {ch}" for ch in alphabet]
+    with db() as con:
+        queries += [r["term"] for r in con.execute("""SELECT k.term FROM keywords k JOIN ranks r ON r.keyword_id = k.id
+            AND r.date = (SELECT MAX(date) FROM ranks WHERE keyword_id = k.id) WHERE k.country = ? AND r.rank IS NOT NULL""", (country,))]
+        for q in dict.fromkeys(x.strip().lower() for x in queries if len(x.strip()) >= 3):
+            con.execute("INSERT OR IGNORE INTO suggest_queries (country, query) VALUES (?, ?)", (country, q))
+
+
+def harvest_suggestions(country, cfg, n, d):
+    """Kaydir n recherches f autocomplete (li 3mmrhom ma tdarou lwlin) o kaysjjel suggestions.
+    Kol suggestion jdida katwelli recherche 7ta hiya (snowball)."""
+    ensure_suggest_queries(country, cfg)
+    cutoff = (datetime.date.fromisoformat(d) - datetime.timedelta(days=RETEST_DAYS)).isoformat()
+    with db() as con:
+        todo = [r["query"] for r in con.execute("""SELECT query FROM suggest_queries WHERE country = ?
+            AND (done_at IS NULL OR done_at < ?) ORDER BY done_at IS NOT NULL, done_at, rowid LIMIT ?""", (country, cutoff, n))]
+    new = 0
+    vocab = domain_vocab(country)
+    for q in todo:
+        try:
+            terms = [x for x in suggest(q, country) if is_relevant(x, vocab)]
+        except Exception as e:
+            log(f"{country.upper()} suggest '{q}': {e}")
+            continue
+        with db() as con:
+            con.execute("UPDATE suggest_queries SET done_at = ?, results = ? WHERE country = ? AND query = ?", (d, len(terms), country, q))
+            for pos, term in enumerate(terms):
+                if not term or TRADEMARKS & set(term.split()):
+                    continue
+                score = suggestion_score(q, pos)
+                cur = con.execute("SELECT score FROM suggestions WHERE country = ? AND term = ?", (country, term)).fetchone()
+                if cur is None:
+                    new += 1
+                    con.execute("INSERT INTO suggestions VALUES (?,?,?,?,?,?)", (country, term, score, q, d, d))
+                    con.execute("INSERT OR IGNORE INTO suggest_queries (country, query) VALUES (?, ?)", (country, term))
+                else:
+                    con.execute("UPDATE suggestions SET last_seen = ?, score = MAX(score, ?) WHERE country = ? AND term = ?",
+                                (d, score, country, term))
+    return len(todo), new
+
+
+def vip_candidates(country, cfg):
+    """Suggestions dyal Apple li mazal ma ttestaw (wla ttestaw 9bel 3 iyam), b score."""
+    cutoff = (datetime.date.today() - datetime.timedelta(days=VIP_RETEST_DAYS)).isoformat()
+    removed = {r.partition("|")[0] for r in cfg.get("removed_keywords", []) if r.endswith("|" + country)}
+    with db() as con:
+        tracked = {r["term"] for r in con.execute("SELECT term FROM keywords WHERE country=?", (country,))}
+        rows = con.execute("""SELECT s.term, s.query FROM suggestions s
+            LEFT JOIN candidates c ON c.country = s.country AND c.term = s.term
+            WHERE s.country = ? AND (c.tested_at IS NULL OR c.tested_at < ?)
+            ORDER BY c.tested_at IS NOT NULL, s.score DESC""", (country, cutoff)).fetchall()
+    return [(r["term"], f"vip:{r['query']}") for r in rows if r["term"] not in tracked and r["term"] not in removed]
 
 
 def analyze_competitors(country, app_id, d):
@@ -776,8 +917,19 @@ def run_job(discover=True, only_country=None, keyword_ids=None, hourly=False):
                 log(f"{cc.upper()} competitors: {e}")
             STATUS["done"] += 1
 
-        # 5. pool (snowball): apps li f top 10 m3ana o keywords dyalhom
-        for cc in [] if not n_pool else countries:
+        # 5a. suggestions dyal App Store (VIP)
+        n_sug = int(cfg.get("suggest_per_run", 60)) if discover and not keywords_only else 0
+        for cc in [] if not n_sug else sorted(countries, key=lambda c: prio_cc.index(c) if c in prio_cc else len(prio_cc)):
+            STATUS["step"] = f"suggest:{cc.upper()}"
+            try:
+                done, new = harvest_suggestions(cc, cfg, n_sug * (2 if cc in prio_cc else 1), d)
+                if new:
+                    log(f"{cc.upper()} App Store suggestions: {done} searches, +{new} new")
+            except Exception as e:
+                log(f"{cc.upper()} suggestions: {e}")
+
+        # 5b. pool (snowball): apps li f top 10 m3ana o keywords dyalhom
+        for cc in countries if discover and not keywords_only else []:
             STATUS["step"] = f"pool:{cc.upper()}"
             try:
                 apps, terms = grow_pool(cc, app_id, d)
@@ -791,7 +943,9 @@ def run_job(discover=True, only_country=None, keyword_ids=None, hourly=False):
         queues = {}
         if discover and not keywords_only:
             for cc in countries:
-                q = generate_candidates(cc, cfg)[:n_cand]
+                # VIP (suggestions dyal Apple) lwlin, mn ba3d ideas, mn ba3d pool
+                q = vip_candidates(cc, cfg)
+                q += [x for x in generate_candidates(cc, cfg)[:n_cand] if x[0] not in {t for t, _ in q}]
                 # pool_per_run = 0 ➜ bla 7ad (budget d w9t howa li kay7bes)
                 q += pool_candidates(cc, cfg, n_pool if n_pool else 100000, {t for t, _ in q})
                 queues[cc] = q
@@ -800,7 +954,7 @@ def run_job(discover=True, only_country=None, keyword_ids=None, hourly=False):
         for cc in prio:
             # f bled prioritaire: keywords b lugha par défaut (English f US) lwlin
             main_lang = (COUNTRY_SEARCH_LANGS.get(cc) or ["en"])[0]
-            queues[cc].sort(key=lambda x: x[1].startswith("seed:") and x[1] != f"seed:{main_lang}")
+            queues[cc].sort(key=lambda x: (not x[1].startswith("vip:"), x[1].startswith("seed:") and x[1] != f"seed:{main_lang}"))
         while any(queues.values()):
             pending = [c for c in prio if queues.get(c)]
             for cc in (pending[:1] if pending else countries):
@@ -932,6 +1086,7 @@ def api_keywords():
                                 WHERE s.date = (SELECT MAX(date) FROM serp WHERE keyword_id = s.keyword_id)
                                 ORDER BY s.keyword_id, s.pos"""):
             serps.setdefault(r["keyword_id"], []).append({"name": r["name"], "ratings": r["ratings"]})
+        vip = {(r["country"], r["term"]): r["score"] for r in con.execute("SELECT country, term, score FROM suggestions")}
     for k in kws:
         h = ranks.get(k["id"], [])
         k["history"] = h[-90:]
@@ -942,6 +1097,16 @@ def api_keywords():
         best = [x["rank"] for x in h if x["rank"]]
         k["best"] = min(best) if best else None
         k.update(keyword_metrics(k["term"], serps.get(k["id"], []), k["rank"]))
+        # suggestion dyal Apple = nas kay9elbo 3liha b sa7: popularity ma kattn9ssch 3la score dyalha
+        k["vip"] = vip.get((k["country"], k["term"]))
+        if k["vip"]:
+            k["pop"] = max(k["pop"] or 0, k["vip"])
+            if k["value_label"] in (None, "none") and not (k["rank"] and k["rank"] <= 50) and k["pop"] >= 45 and (k["diff"] or 0) <= 60:
+                k["value_label"] = "target"
+            elif k["rank"] and k["rank"] <= 50:
+                k["value"] = round(k["pop"] * rank_share(k["rank"]), 1)
+                v = k["value"]
+                k["value_label"] = "high" if v >= 10 else "medium" if v >= 3 else "low" if v > 0.2 else "none"
     return kws
 
 
@@ -972,6 +1137,27 @@ def api_competitors():
                 terms.append({"term": term, "status": status, "rank": kw_rank.get(key)})
             comp["terms"] = terms
         out[cc] = comps
+    return out
+
+
+def api_suggestions():
+    out = {}
+    with db() as con:
+        for cc in load_config()["countries"]:
+            rows = con.execute("""SELECT s.term, s.score, s.query, s.first_seen, c.tested_at, c.rank FROM suggestions s
+                LEFT JOIN candidates c ON c.country = s.country AND c.term = s.term
+                WHERE s.country = ? ORDER BY s.score DESC LIMIT 3000""", (cc,)).fetchall()
+            done = con.execute("SELECT COUNT(*) n, SUM(done_at IS NOT NULL) d FROM suggest_queries WHERE country = ?", (cc,)).fetchone()
+            tracked = {r["term"]: (r["date"], r["rank"]) for r in con.execute("""SELECT k.term, r.date, r.rank FROM keywords k
+                JOIN ranks r ON r.keyword_id = k.id AND r.date = (SELECT MAX(date) FROM ranks WHERE keyword_id = k.id)
+                WHERE k.country = ?""", (cc,))}
+            items = []
+            for r in rows:
+                it = dict(r)
+                if it["term"] in tracked:  # keyword kattba3o: rank mn check dyal kol nhar
+                    it["tested_at"], it["rank"] = tracked[it["term"]]
+                items.append(it)
+            out[cc] = {"items": items, "queries": done["n"] or 0, "queries_done": done["d"] or 0}
     return out
 
 
@@ -1043,6 +1229,8 @@ class Handler(BaseHTTPRequestHandler):
             return self.send(api_keywords())
         if u.path == "/api/serp":
             return self.send(api_serp(int(q["id"][0])))
+        if u.path == "/api/suggestions":
+            return self.send(api_suggestions())
         if u.path == "/api/pool":
             return self.send(api_pool())
         if u.path == "/api/competitors":
@@ -1147,6 +1335,7 @@ def export_static():
         "candidates.json": api_candidates(),
         "competitors.json": api_competitors(),
         "pool.json": api_pool(),
+        "suggestions.json": api_suggestions(),
         "serp.json": {str(k["id"]): api_serp(k["id"]) for k in keywords},
         "analysis.json": {cc: api_analysis(cc) for cc in state["config"]["countries"]},
     }
