@@ -31,8 +31,11 @@ CONFIG_PATH = os.path.join(BASE, "config.json")
 DASHBOARD_PATH = os.path.join(BASE, "docs", "index.html")
 STATIC_DIR = os.path.join(BASE, "docs", "data")
 UA = "ASO-Tracker/1.0 (personal rank tracker)"
-REQUEST_DELAY = 1.2  # tsenna bin kol request o lakhor bach ma nt9elch 3la Apple
-MAX_DELAY = 4.0      # ila Apple galt 429, delay kaytzad 7ta had l7ed
+# W9t a9all bin jouj requests l nefs serveur d Apple (seconde). iTunes Search API: Apple katgoul ~20 request f d9i9a,
+# ya3ni 3.2 s (~19/d9i9a) bach nb9aw ta7t l7ed o ma ydirch 429.
+HOST_INTERVAL = {"itunes.apple.com": 3.2, "apps.apple.com": 3.0, "search.itunes.apple.com": 2.0}
+DEFAULT_INTERVAL = 2.0
+MAX_INTERVAL = 12.0
 RETEST_DAYS = 7      # keyword li ma ranké fih ghayt3awed ytesta mn ba3d had l iyam
 HARD_LIMIT_MIN = 75  # 7ed a9sa l run wa7d (GitHub kay7bes job f 90 d9i9a)
 CHECKPOINT_MIN = 10  # sauvegarde f nos run (ila t7bes run, li jay kaykmmel mn hna)
@@ -292,39 +295,50 @@ def today():
 
 # ---------------------------------------------------------------- apple
 
-_last_request = 0.0
-_delay = REQUEST_DELAY
-_ok_streak = 0
+_host_last = {}       # akher request l kol serveur
+_host_interval = {}   # interval daba l kol serveur (kaytl3 m3a 429 o kayhbet mli kolchi mzyan)
+_host_ok = {}
 _request_lock = threading.Lock()
 
 
+def host_interval(host):
+    return _host_interval.get(host, HOST_INTERVAL.get(host, DEFAULT_INTERVAL))
+
+
 def fetch(url, headers=None):
-    global _last_request, _delay, _ok_streak
+    host = urllib.parse.urlparse(url).hostname
+    base = HOST_INTERVAL.get(host, DEFAULT_INTERVAL)
     for attempt in range(4):
+        # kan7jzo l w9t dyal had serveur (bla ma n7bso serveurs khrin li khdamin f thread akhor)
         with _request_lock:
-            wait = _delay - (time.time() - _last_request)
-            if wait > 0:
-                time.sleep(wait)
-            _last_request = time.time()
+            slot = max(time.time(), _host_last.get(host, 0) + host_interval(host))
+            _host_last[host] = slot
+        if slot > time.time():
+            time.sleep(slot - time.time())
         req = urllib.request.Request(url, headers={"User-Agent": UA, "Accept-Encoding": "gzip", **(headers or {})})
         try:
             with urllib.request.urlopen(req, timeout=30) as r:
                 data = r.read()
                 if r.headers.get("Content-Encoding") == "gzip":
                     data = gzip.decompress(data)
-            # mli Apple katjaweb mzyan b zzaf d mrat, delay kayhbet b chwiya l l asli
-            _ok_streak += 1
-            if _ok_streak >= 30 and _delay > REQUEST_DELAY:
-                _delay = max(REQUEST_DELAY, _delay - 0.25)
-                _ok_streak = 0
+            # mli serveur kayjaweb mzyan 50 mra mtab3in, interval kayhbet b chwiya l l asli
+            _host_ok[host] = _host_ok.get(host, 0) + 1
+            if _host_ok[host] >= 50 and host_interval(host) > base:
+                _host_interval[host] = max(base, host_interval(host) * 0.85)
+                _host_ok[host] = 0
             return data.decode("utf-8", "replace")
         except urllib.error.HTTPError as e:
-            # 429 = Apple katgoul "bzzaf d requests": ntsennaw o n3awdo
+            # 429 = Apple katgoul "bzzaf d requests": nbta2o had serveur o ntsennaw l w9t li katgoul
             if e.code not in (429, 503) or attempt == 3:
                 raise
-            _delay = min(MAX_DELAY, _delay + 0.5)
-            _ok_streak = 0
-            time.sleep(15 * (attempt + 1))
+            _host_interval[host] = min(MAX_INTERVAL, host_interval(host) * 1.5)
+            _host_ok[host] = 0
+            try:
+                retry = float(e.headers.get("Retry-After") or 0)
+            except ValueError:
+                retry = 0
+            log(f"Apple {e.code} on {host}: waiting, interval now {host_interval(host):.1f}s")
+            time.sleep(max(retry, 30 * (attempt + 1)))
 
 
 def lookup(ids, country, lang=None):
@@ -534,30 +548,6 @@ def suggest(term, country):
     return [html.unescape(m).strip().lower() for m in re.findall(r"<key>term</key>\s*<string>([^<]*)</string>", h)]
 
 
-def domain_vocab(country):
-    """Kalimat dyal game: seeds dyal lughat dyal bled + smiya/subtitle + keywords li ranké fihom."""
-    seeds = load_seeds()
-    vocab = set()
-    for lang in COUNTRY_SEARCH_LANGS.get(country, ["en"]):
-        for w in seeds.get(lang, []):
-            vocab |= set(tokens(w, split_dots=False))
-    vocab |= set(tokens(own_text(country)[0]))
-    with db() as con:
-        for r in con.execute("""SELECT k.term FROM keywords k JOIN ranks r ON r.keyword_id = k.id
-                AND r.date = (SELECT MAX(date) FROM ranks WHERE keyword_id = k.id) WHERE k.country = ? AND r.rank IS NOT NULL""", (country,)):
-            vocab |= set(tokens(r["term"], split_dots=False))
-    return vocab - DESC_STOP
-
-
-def is_relevant(term, vocab):
-    # kalma kif kif, wla b "s" (dunk/dunks), wla kalma twila b nefs bidaya (basketball/basketballs)
-    long5 = {w[:5] for w in vocab if len(w) >= 6}
-    for tok in tokens(term, split_dots=False):
-        if tok in vocab or tok.rstrip("s") in vocab or tok + "s" in vocab or (len(tok) >= 6 and tok[:5] in long5):
-            return True
-    return False
-
-
 def suggestion_score(query, position):
     # suggestion li katban b recherche 9siira o f lfo9 = nas kay9elbo 3liha bzzaf
     return max(1, round(100 - position * 4 - max(0, len(query) - 3) * 1.5))
@@ -582,7 +572,7 @@ def ensure_suggest_queries(country, cfg):
             con.execute("INSERT OR IGNORE INTO suggest_queries (country, query) VALUES (?, ?)", (country, q))
 
 
-def harvest_suggestions(country, cfg, n, d):
+def harvest_suggestions(country, cfg, n, d, deadline=None):
     """Kaydir n recherches f autocomplete (li 3mmrhom ma tdarou lwlin) o kaysjjel suggestions.
     Kol suggestion jdida katwelli recherche 7ta hiya (snowball)."""
     ensure_suggest_queries(country, cfg)
@@ -590,11 +580,13 @@ def harvest_suggestions(country, cfg, n, d):
     with db() as con:
         todo = [r["query"] for r in con.execute("""SELECT query FROM suggest_queries WHERE country = ?
             AND (done_at IS NULL OR done_at < ?) ORDER BY done_at IS NOT NULL, done_at, rowid LIMIT ?""", (country, cutoff, n))]
-    new = 0
-    vocab = domain_vocab(country)
+    new = done = 0
     for q in todo:
+        if deadline and time.time() > deadline:
+            break
+        done += 1
         try:
-            terms = [x for x in suggest(q, country) if is_relevant(x, vocab)]
+            terms = suggest(q, country)
         except Exception as e:
             log(f"{country.upper()} suggest '{q}': {e}")
             continue
@@ -612,7 +604,7 @@ def harvest_suggestions(country, cfg, n, d):
                 else:
                     con.execute("UPDATE suggestions SET last_seen = ?, score = MAX(score, ?) WHERE country = ? AND term = ?",
                                 (d, score, country, term))
-    return len(todo), new
+    return done, new
 
 
 def vip_candidates(country, cfg):
@@ -952,16 +944,20 @@ def run_job(discover=True, only_country=None, keyword_ids=None, hourly=False):
                 log(f"{cc.upper()} competitors: {e}")
             STATUS["done"] += 1
 
-        # 5a. suggestions dyal App Store (VIP)
+        # 5a. suggestions dyal App Store (VIP): f thread bo7dha m3a discovery. Serveur dyal suggestions machi
+        # howa dyal search API, ya3ni kol wa7d kaykhdem b l7ed dyalo bla ma ydir 429.
         n_sug = int(cfg.get("suggest_per_run", 60)) if discover and not keywords_only else 0
-        for cc in [] if not n_sug else sorted(countries, key=lambda c: prio_cc.index(c) if c in prio_cc else len(prio_cc)):
-            STATUS["step"] = f"suggest:{cc.upper()}"
-            try:
-                done, new = harvest_suggestions(cc, cfg, n_sug * (2 if cc in prio_cc else 1), d)
-                if new:
-                    log(f"{cc.upper()} App Store suggestions: {done} searches, +{new} new")
-            except Exception as e:
-                log(f"{cc.upper()} suggestions: {e}")
+
+        def harvest_all():
+            for cc in sorted(countries, key=lambda c: prio_cc.index(c) if c in prio_cc else len(prio_cc)):
+                try:
+                    done, new = harvest_suggestions(cc, cfg, n_sug * (2 if cc in prio_cc else 1), d, deadline)
+                    if done:
+                        log(f"{cc.upper()} App Store suggestions: {done} searches, +{new} new")
+                except Exception as e:
+                    log(f"{cc.upper()} suggestions: {e}")
+
+        harvester = threading.Thread(target=harvest_all, daemon=True) if n_sug else None
 
         # 5b. pool (snowball): apps li f top 10 m3ana o keywords dyalhom
         for cc in countries if discover and not keywords_only else []:
@@ -990,6 +986,8 @@ def run_job(discover=True, only_country=None, keyword_ids=None, hourly=False):
                 queues[cc] = q
                 seen_terms[cc] = seen
             STATUS["total"] = STATUS["done"] + sum(map(len, queues.values()))
+        if harvester:
+            harvester.start()
         prio = [c for c in cfg.get("priority_countries", ["us"]) if c in queues]
         for cc in prio:
             # f bled prioritaire: keywords b lugha par défaut (English f US) lwlin
@@ -1027,8 +1025,11 @@ def run_job(discover=True, only_country=None, keyword_ids=None, hourly=False):
                 except Exception as e:
                     log(f"discovery '{term}' {cc}: {e}")
                 STATUS["done"] += 1
+        if harvester:
+            harvester.join(timeout=max(0, deadline - time.time()) + 60)
         if tested:
-            log(f"Discovery: {tested} keywords tested in {(time.time() - started) / 60:.0f} min (delay {_delay:.1f}s).")
+            log(f"Discovery: {tested} keywords tested in {(time.time() - started) / 60:.0f} min "
+                f"(search API interval {host_interval('itunes.apple.com'):.1f}s).")
 
         if not only_country and not keywords_only and not hourly:
             meta_set("last_run", d)
