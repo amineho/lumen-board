@@ -2,7 +2,9 @@ name: build
 
 on:
   schedule:
-    - cron: "17 8 * * *"   # kol nhar 08:17 UTC (09:17 f lmaghrib)
+    # kol sa3a f :03. Tool kaykhtar wa7do: check kamel mra f nhar (daily_hour_utc = 3 ➜ 04:03 f lmaghrib),
+    # o f lb9i discovery kaykmmel mn fin w9ef (time_budget_minutes)
+    - cron: "3 * * * *"
   workflow_dispatch:
     inputs:
       discover:
@@ -27,13 +29,22 @@ concurrency:
 jobs:
   track:
     runs-on: ubuntu-latest
-    timeout-minutes: 180
+    timeout-minutes: 90
     steps:
       - uses: actions/checkout@v4
 
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
+
+      # data (aso.db + docs/data) katkoun f branch "data", machi f main, bach historique ma ykberch
+      - name: Jib data
+        run: |
+          if git fetch --depth=1 origin data; then
+            git checkout FETCH_HEAD -- aso.db docs/data
+          else
+            echo "Mazal ma kayn ta data (awel run)"
+          fi
 
       - name: Check ranks
         env:
@@ -42,16 +53,22 @@ jobs:
           KEYWORDS: ${{ github.event.inputs.keywords }}
         run: |
           set -- --run
-          if [ "$EVENT" = "push" ] || [ "$DISCOVER" = "false" ]; then set -- "$@" --no-discover; fi
-          if [ -n "$KEYWORDS" ]; then set -- "$@" --keywords "$KEYWORDS"; fi
+          if [ -n "$KEYWORDS" ]; then set -- "$@" --keywords "$KEYWORDS"
+          elif [ "$EVENT" = "push" ] || [ "$DISCOVER" = "false" ]; then set -- "$@" --no-discover
+          elif [ "$EVENT" = "schedule" ]; then set -- "$@" --auto
+          fi
           python tracker.py "$@"
 
       - name: Sjjel data
+        env:
+          TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add aso.db docs/data
-          git diff --cached --quiet && exit 0
-          git commit -m "update"
-          git pull --rebase
-          git push
+          out=$(mktemp -d)
+          mkdir -p "$out/docs"
+          cp aso.db "$out/"
+          cp -r docs/data "$out/docs/"
+          cd "$out"
+          git init -q -b data
+          git add -A
+          git -c user.name="github-actions[bot]" -c user.email="41898282+github-actions[bot]@users.noreply.github.com" commit -qm update
+          git push -qf "https://x-access-token:${TOKEN}@github.com/${GITHUB_REPOSITORY}.git" data

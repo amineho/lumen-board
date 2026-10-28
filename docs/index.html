@@ -328,7 +328,8 @@ code { font: 12px ui-monospace, Menlo, Consolas, monospace; direction: ltr; unic
         <div><label for="cfgApp" data-i18n="appId"></label><input id="cfgApp" dir="ltr"></div>
         <div id="cfgHourWrap"><label for="cfgHour" data-i18n="hour"></label><input id="cfgHour" type="number" min="0" max="23"></div>
         <div><label for="cfgCand" data-i18n="cand"></label><input id="cfgCand" type="number" min="0" max="500"></div>
-        <div><label for="cfgPool" data-i18n="poolPer"></label><input id="cfgPool" type="number" min="0" max="2000"></div>
+        <div><label for="cfgPool" data-i18n="poolPer"></label><input id="cfgPool" type="number" min="0" max="100000"></div>
+        <div><label for="cfgBudget" data-i18n="budgetL"></label><input id="cfgBudget" type="number" min="5" max="75"></div>
       </div>
       <label for="cfgCountries" data-i18n="countriesL"></label>
       <input id="cfgCountries" dir="ltr">
@@ -402,7 +403,7 @@ const I18N = {
     poolHelp: "For every keyword where your game is in the top 10, the tracker saves the top 10 games for it (once per app) and stores all their keywords in every language of the country. It tests your game on these keywords every day: never-tested first, then older ones again. Keywords where your game ranks are added to your list, and their top 10 games feed the pool in turn.",
     poolApps: "Apps in the pool", poolTerms: "Keywords in the pool", poolTested: "Tested", poolRanked: "Your game ranks",
     fromKw: "Found via keyword", addedOn: "Added", nTerms: "Keywords", emptyPool: "The pool is empty for now. It fills after the next full check, from keywords where your game is in the top 10.",
-    oPool: "Pool: {name}", poolPer: "Pool keywords to test per country", stPool: "Keyword pool ({c})",
+    oPool: "Pool: {name}", poolPer: "Pool keywords per country (0 = no limit)", budgetL: "Minutes of search per hourly run (max 75)", stPool: "Keyword pool ({c})",
     perPage: "Per page", showing: "{a}–{b} of {n}", prevPage: "Previous page", nextPage: "Next page",
     tabCompetitors: "Competitors", compTitle: "Your main competitors",
     compHelp: "Games in your category that appear most often in the top 10 of your keywords. Their keywords come from their name and description, because the App Store Connect keyword field is private. Every day the tracker tests your game on these keywords and adds the ones where it ranks.",
@@ -432,14 +433,14 @@ const I18N = {
     s3: "Repository access: <b>Only select repositories</b> ➜ choose <b>{repo}</b>",
     s4: "Permissions ➜ Repository permissions: <b>Contents: Read and write</b> and <b>Actions: Read and write</b>",
     s5: "Generate the token, copy it and paste it here",
-    schedule: "The automatic check runs every day at <b>08:17 UTC</b>. Change it in <code>.github/workflows/track.yml</code>.", seeRuns: "See runs on GitHub Actions",
+    schedule: "The tracker runs <b>every hour, 24/7</b>. At <b>04:03 Morocco time</b> it refreshes the ranks of all your keywords, then every hour it continues the search for new keywords where it stopped (US and English first) and saves the results, so this page updates every hour. A refresh you start waits for the current run to finish.", seeRuns: "See runs on GitHub Actions",
     searchMode: "Search mode",
     apiOk: "✅ Search API available: ranks are checked down to <b>#200</b>.",
     apiBlocked: "⚠️ Apple blocked the search API from this network. Only the first <b>~10–20 results</b> per keyword are checked (the real App Store order).",
     apiNone: "No check has run yet.",
     needToken: "Add a GitHub token in Settings ➜ GitHub first.",
     ghRejected: "GitHub rejected the token ({s}). Check that it has Contents and Actions: Read and write. {m}",
-    ghWorking: "⏳ Running on GitHub. New data appears here when it finishes (full check: about 5–15 minutes). {link}",
+    ghWorking: "⏳ Running on GitHub. New data appears here when it finishes (a full check with discovery can take up to the time budget in Settings). {link}",
     ghKwWorking: "⏳ Refreshing {n} keywords on GitHub, about 1–3 minutes… {link}",
     follow: "Follow it on GitHub Actions",
     runRunning: "⏳ A check is running on GitHub ({s}). {link}", runFailed: "The last check on GitHub failed. {link}", seeError: "See the error",
@@ -482,7 +483,7 @@ const I18N = {
     poolHelp: "لكل كلمة مفتاحية تكون لعبتك فيها ضمن أفضل 10، يحفظ المتتبّع أفضل 10 ألعاب فيها (مرة واحدة لكل تطبيق) ويخزّن كل كلماتها المفتاحية بجميع لغات الدولة. ثم يختبر لعبتك على هذه الكلمات يوميًا: التي لم تُختبر أولًا، ثم القديمة من جديد. الكلمات التي تظهر فيها لعبتك تُضاف إلى قائمتك، وتغذّي أفضل 10 ألعاب فيها المخزون بدورها.",
     poolApps: "تطبيقات في المخزون", poolTerms: "كلمات في المخزون", poolTested: "اختُبرت", poolRanked: "تظهر فيها لعبتك",
     fromKw: "عُثر عليه عبر الكلمة", addedOn: "تاريخ الإضافة", nTerms: "عدد الكلمات", emptyPool: "المخزون فارغ حاليًا. سيمتلئ بعد الفحص الكامل القادم، انطلاقًا من الكلمات التي تكون فيها لعبتك ضمن أفضل 10.",
-    oPool: "المخزون: {name}", poolPer: "عدد كلمات المخزون المختبرة لكل دولة", stPool: "مخزون الكلمات ({c})",
+    oPool: "المخزون: {name}", poolPer: "كلمات المخزون لكل دولة (0 = بلا حد)", budgetL: "دقائق البحث في كل تشغيل كل ساعة (75 كحد أقصى)", stPool: "مخزون الكلمات ({c})",
     perPage: "لكل صفحة", showing: "{a}–{b} من {n}", prevPage: "الصفحة السابقة", nextPage: "الصفحة التالية",
     tabCompetitors: "المنافسون", compTitle: "أبرز منافسيك",
     compHelp: "ألعاب من فئتك تظهر أكثر من غيرها في أفضل 10 نتائج لكلماتك المفتاحية. كلماتها المفتاحية مستخرجة من اسمها ووصفها، لأن حقل الكلمات المفتاحية في App Store Connect خاص. يختبر المتتبّع لعبتك يوميًا على هذه الكلمات ويضيف التي تظهر فيها.",
@@ -512,14 +513,14 @@ const I18N = {
     s3: "الوصول إلى المستودعات: <b>Only select repositories</b> ← اختر <b>{repo}</b>",
     s4: "الأذونات ← Repository permissions: <b>Contents: Read and write</b> و<b>Actions: Read and write</b>",
     s5: "أنشئ الرمز وانسخه ثم الصقه هنا",
-    schedule: "يعمل الفحص التلقائي يوميًا الساعة <b>08:17</b> بتوقيت UTC. يمكنك تغييره في <code>.github/workflows/track.yml</code>.", seeRuns: "عرض عمليات التشغيل في GitHub Actions",
+    schedule: "يعمل المتتبّع <b>كل ساعة، على مدار 24 ساعة</b>. في الساعة <b>04:03 بتوقيت المغرب</b> يحدّث ترتيب كل كلماتك المفتاحية، ثم يواصل كل ساعة البحث عن كلمات جديدة من حيث توقف (الولايات المتحدة والإنجليزية أولًا) ويحفظ النتائج، فتتحدّث هذه الصفحة كل ساعة. أي تحديث تطلبه ينتظر انتهاء التشغيل الجاري.", seeRuns: "عرض عمليات التشغيل في GitHub Actions",
     searchMode: "وضع البحث",
     apiOk: "✅ واجهة البحث متاحة: يُفحص الترتيب حتى المركز <b>200</b>.",
     apiBlocked: "⚠️ حجبت Apple واجهة البحث من هذه الشبكة. تُفحص أول <b>10–20 نتيجة</b> تقريبًا لكل كلمة (الترتيب الفعلي في App Store).",
     apiNone: "لم يُجرَ أي فحص بعد.",
     needToken: "أضف رمز GitHub أولًا من الإعدادات ← GitHub.",
     ghRejected: "رفض GitHub الرمز ({s}). تأكد من أن له صلاحيتي Contents و Actions: Read and write. {m}",
-    ghWorking: "⏳ يجري التشغيل على GitHub. ستظهر البيانات الجديدة هنا عند انتهائه (الفحص الكامل يستغرق 5 إلى 15 دقيقة تقريبًا). {link}",
+    ghWorking: "⏳ يجري التشغيل على GitHub. ستظهر البيانات الجديدة هنا عند انتهائه (قد يستغرق الفحص الكامل مع الاكتشاف حتى المدة المحددة في الإعدادات). {link}",
     ghKwWorking: "⏳ جارٍ تحديث {n} من الكلمات المفتاحية على GitHub، من دقيقة إلى 3 دقائق تقريبًا… {link}",
     follow: "تابعه في GitHub Actions",
     runRunning: "⏳ يجري فحص على GitHub الآن ({s}). {link}", runFailed: "فشل آخر فحص على GitHub. {link}", seeError: "عرض الخطأ",
@@ -601,8 +602,14 @@ async function ghApi(path, opts = {}) {
 }
 function staticGet(name) {
   // GitHub mode: data kat t9ra ghir b GitHub API b token dyal li dar login
-  return staticCache[name] ??= ghApi(`/contents/docs/data/${name}?ref=main`, {headers: {Accept: "application/vnd.github.raw+json"}})
-    .then(JSON.parse).catch(e => { if (/404/.test(e.message)) return null; throw e; });
+  // data katkoun f branch "data" (kattsjjel kol sa3a); main ghir l data l9dima
+  return staticCache[name] ??= (async () => {
+    for (const ref of ["data", "main"]) {
+      try { return JSON.parse(await ghApi(`/contents/docs/data/${name}?ref=${ref}`, {headers: {Accept: "application/vnd.github.raw+json"}})); }
+      catch (e) { if (!/404/.test(e.message)) throw e; }
+    }
+    return null;
+  })();
 }
 // token khasso l7a9 ykteb f repo (ya3ni mol repo wla collaborator)
 async function verifyLogin(token, repo) {
@@ -695,7 +702,7 @@ async function api(p, body) {
   }
   if (u.pathname === "/api/config") {
     await editConfig(cfg => {
-      cfg.app_id = body.app_id; cfg.candidates_per_run = +body.candidates_per_run; cfg.pool_per_run = +body.pool_per_run; cfg.my_keywords = body.my_keywords;
+      cfg.app_id = body.app_id; cfg.candidates_per_run = +body.candidates_per_run; cfg.pool_per_run = +body.pool_per_run; cfg.time_budget_minutes = +body.time_budget_minutes; cfg.my_keywords = body.my_keywords;
       cfg.countries = body.countries.split(",").map(c => c.trim().toLowerCase()).filter(Boolean);
       return "update";
     });
@@ -784,7 +791,7 @@ function renderSettingsForm() {
   const checked = new Set([...document.querySelectorAll("#addCountries input:checked")].map(i => i.value));
   $("#addCountries").innerHTML = cc.map(c => `<label><input type="checkbox" value="${c}" ${!checked.size || checked.has(c) ? "checked" : ""}> ${flag(c)} ${c.toUpperCase()}</label>`).join("");
   if (!$("#cfgApp").dataset.filled) {
-    $("#cfgApp").value = S.config.app_id; $("#cfgHour").value = S.config.daily_hour; $("#cfgCand").value = S.config.candidates_per_run; $("#cfgPool").value = S.config.pool_per_run ?? 100;
+    $("#cfgApp").value = S.config.app_id; $("#cfgHour").value = S.config.daily_hour; $("#cfgCand").value = S.config.candidates_per_run; $("#cfgPool").value = S.config.pool_per_run ?? 0; $("#cfgBudget").value = S.config.time_budget_minutes ?? 0;
     $("#cfgCountries").value = cc.join(", "); $("#cfgKw").value = S.config.my_keywords; $("#cfgApp").dataset.filled = "1";
   }
   $("#apiMode").innerHTML = S.api_mode === "blocked" ? t("apiBlocked") : S.api_mode === "ok" ? t("apiOk") : t("apiNone");
@@ -1187,7 +1194,7 @@ $("#addBtn").onclick = act(async () => {
   await loadAll(); flash(t("runDone"), "ok");
 });
 $("#saveCfg").onclick = act(async () => {
-  const r = await api("/api/config", {app_id: $("#cfgApp").value.trim(), daily_hour: $("#cfgHour").value, candidates_per_run: $("#cfgCand").value, pool_per_run: $("#cfgPool").value, countries: $("#cfgCountries").value, my_keywords: $("#cfgKw").value});
+  const r = await api("/api/config", {app_id: $("#cfgApp").value.trim(), daily_hour: $("#cfgHour").value, candidates_per_run: $("#cfgCand").value, pool_per_run: $("#cfgPool").value, time_budget_minutes: $("#cfgBudget").value, countries: $("#cfgCountries").value, my_keywords: $("#cfgKw").value});
   $("#cfgMsg").textContent = t("saved");
   $("#cfgApp").dataset.filled = "";
   if (!r.github) return loadAll();

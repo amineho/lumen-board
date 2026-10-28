@@ -30,8 +30,10 @@ CONFIG_PATH = os.path.join(BASE, "config.json")
 DASHBOARD_PATH = os.path.join(BASE, "docs", "index.html")
 STATIC_DIR = os.path.join(BASE, "docs", "data")
 UA = "ASO-Tracker/1.0 (personal rank tracker)"
-REQUEST_DELAY = 1.5  # tsenna bin kol request o lakhor bach ma nt9elch 3la Apple
+REQUEST_DELAY = 1.2  # tsenna bin kol request o lakhor bach ma nt9elch 3la Apple
+MAX_DELAY = 4.0      # ila Apple galt 429, delay kaytzad 7ta had l7ed
 RETEST_DAYS = 7      # keyword li ma ranké fih ghayt3awed ytesta mn ba3d had l iyam
+HARD_LIMIT_MIN = 75  # 7ed a9sa l run wa7d (GitHub kay7bes job f 90 d9i9a)
 
 DEFAULT_CONFIG = {
     "app_id": "6447526912",
@@ -40,7 +42,13 @@ DEFAULT_CONFIG = {
     "daily_hour": 9,
     "candidates_per_run": 60,
     # ch7al mn keyword mn pool (keywords dyal apps li f top 10 m3ak) ytesta f kol bled f kol run
-    "pool_per_run": 100,
+    "pool_per_run": 0,
+    # bldan li kaykmlo discovery dyalhom 9bel lakhrin (b tartib)
+    "priority_countries": ["us"],
+    # sa3a (UTC) dyal check kamel f GitHub: 3 = 4 d sba7 f lmaghrib
+    "daily_hour_utc": 3,
+    # ch7al mn d9i9a y9der ydir run kamel (0 = bla 7ad). Discovery katwe99ef mli ykmel l w9t.
+    "time_budget_minutes": 0,
     "my_keywords": "",
     # keywords li kantba3o: "term" = f kol l bldan, "term|us" = f bled wa7d
     "manual_keywords": [],
@@ -199,6 +207,7 @@ def init_db():
             app_id TEXT,
             added_at TEXT,
             n_apps INTEGER DEFAULT 1,
+            lang TEXT,
             PRIMARY KEY (country, term)
         );
         CREATE TABLE IF NOT EXISTS competitors (
@@ -214,6 +223,13 @@ def init_db():
             PRIMARY KEY (date, country, app_id)
         );
         """)
+
+
+def migrate_db():
+    with db() as con:
+        cols = {r["name"] for r in con.execute("PRAGMA table_info(pool_terms)")}
+        if "lang" not in cols:
+            con.execute("ALTER TABLE pool_terms ADD COLUMN lang TEXT")
 
 
 def meta_get(key, default=None):
@@ -234,14 +250,15 @@ def today():
 # ---------------------------------------------------------------- apple
 
 _last_request = 0.0
+_delay = REQUEST_DELAY
 _request_lock = threading.Lock()
 
 
 def fetch(url):
-    global _last_request
+    global _last_request, _delay
     for attempt in range(4):
         with _request_lock:
-            wait = REQUEST_DELAY - (time.time() - _last_request)
+            wait = _delay - (time.time() - _last_request)
             if wait > 0:
                 time.sleep(wait)
             _last_request = time.time()
@@ -256,6 +273,7 @@ def fetch(url):
             # 429 = Apple katgoul "bzzaf d requests": ntsennaw o n3awdo
             if e.code not in (429, 503) or attempt == 3:
                 raise
+            _delay = min(MAX_DELAY, _delay + 0.5)
             time.sleep(15 * (attempt + 1))
 
 
@@ -299,8 +317,17 @@ def search_api(term, country):
         return None
 
 
-def check_rank(term, country, app_id):
-    """Kayrj3 (rank, depth, method, top_ids, subtitles)."""
+def check_rank(term, country, app_id, fast=False):
+    """Kayrj3 (rank, depth, method, top_ids, subtitles).
+    fast=True (discovery): search API bo7dha (request wa7d, top 200), o page dyal App Store
+    ghir ila app f top 25 bach rank ykon b dbt. Ila API mbloka, kayrje3 l tari9a l3adiya."""
+    if fast:
+        api = search_api(term, country)
+        if api is not None:
+            if app_id not in api:
+                return None, len(api), "api", api[:10], []
+            if api.index(app_id) >= 25:
+                return api.index(app_id) + 1, len(api), "api", api[:10], []
     ids, subtitles = search_page(term, country)
     if app_id in ids:
         return ids.index(app_id) + 1, len(ids), "store", ids, subtitles
@@ -500,15 +527,16 @@ def grow_pool(country, app_id, d):
             r = info.get(aid)
             if not r or (own_genre and str(r.get("primaryGenreId")) != str(own_genre)):
                 continue
-            terms = competitor_terms(r.get("trackName", ""), r.get("description", ""), 30)
-            for li in localized.values():
+            terms = [(x, None) for x in competitor_terms(r.get("trackName", ""), r.get("description", ""), 30)]
+            for lang, li in localized.items():
                 lr = li.get(aid) or {}
                 if (lr.get("trackName"), lr.get("description")) != (r.get("trackName"), r.get("description")):
-                    terms += [x for x in competitor_terms(lr.get("trackName", ""), lr.get("description", ""), 20) if x not in terms]
+                    seen = {x for x, _ in terms}
+                    terms += [(x, lang) for x in competitor_terms(lr.get("trackName", ""), lr.get("description", ""), 20) if x not in seen]
             before = con.total_changes
-            for term in terms:
-                con.execute("""INSERT INTO pool_terms VALUES (?,?,?,?,1)
-                               ON CONFLICT(country, term) DO UPDATE SET n_apps = n_apps + 1""", (country, term, aid, d))
+            for term, lang in terms:
+                con.execute("""INSERT INTO pool_terms (country, term, app_id, added_at, n_apps, lang) VALUES (?,?,?,?,1,?)
+                               ON CONFLICT(country, term) DO UPDATE SET n_apps = n_apps + 1""", (country, term, aid, d, lang))
             terms_added += con.execute("SELECT COUNT(*) FROM pool_terms WHERE country=? AND app_id=? AND added_at=?",
                                        (country, aid, d)).fetchone()[0] if con.total_changes > before else 0
             con.execute("""INSERT INTO pool_apps VALUES (?,?,?,?,?,?,?,?) ON CONFLICT(country, app_id) DO UPDATE SET
@@ -530,7 +558,7 @@ def pool_candidates(country, cfg, n, exclude):
             LEFT JOIN pool_apps a ON a.country = p.country AND a.app_id = p.app_id
             LEFT JOIN candidates c ON c.country = p.country AND c.term = p.term
             WHERE p.country = ? AND (c.tested_at IS NULL OR c.tested_at < ?)
-            ORDER BY c.tested_at IS NOT NULL, c.tested_at, p.n_apps DESC, p.added_at""", (country, cutoff)).fetchall()
+            ORDER BY p.lang IS NOT NULL, c.tested_at IS NOT NULL, c.tested_at, p.n_apps DESC, p.added_at""", (country, cutoff)).fetchall()
     out = []
     for r in rows:
         term = r["term"]
@@ -637,11 +665,13 @@ def save_serp(con, keyword_id, date, top_ids, names):
                     (keyword_id, date, pos, aid, r.get("trackName"), r.get("userRatingCount")))
 
 
-def run_job(discover=True, only_country=None, keyword_ids=None):
+def run_job(discover=True, only_country=None, keyword_ids=None, hourly=False):
     """Check kamel. Ila t3taw keyword_ids, kaychecki ghir had keywords (bla app info, charts o discovery).
+    hourly=True: ghir pool o discovery (kol sa3a), bla check dyal keywords li kattba3o.
     STATUS["step"] = code ("info:US", "keyword:term|US"...) bach dashboard yterjmo."""
     if not _job_lock.acquire(blocking=False):
         return False
+    started = time.time()
     try:
         STATUS.update(running=True, error="", done=0, total=0, log=[])
         cfg = load_config()
@@ -651,18 +681,28 @@ def run_job(discover=True, only_country=None, keyword_ids=None):
         d = today()
 
         with db() as con:
-            if keywords_only:
+            if hourly:
+                # keywords li ma tchekawch f check d sba7 (ila ma kmlch), bach ykmlo f runs dyal kol sa3a
+                kws = con.execute("""SELECT k.* FROM keywords k WHERE k.country IN (%s) AND NOT EXISTS
+                                     (SELECT 1 FROM ranks r WHERE r.keyword_id = k.id AND r.date = ?)""" % ",".join("?" * len(countries)),
+                                  countries + [d]).fetchall() if meta_get("last_run") == d else []
+            elif keywords_only:
                 kws = [r for kid in keyword_ids for r in con.execute("SELECT * FROM keywords WHERE id=?", (kid,))]
             else:
                 kws = con.execute("SELECT * FROM keywords WHERE country IN (%s)" % ",".join("?" * len(countries)),
                                   countries).fetchall()
+        prio_cc = cfg.get("priority_countries", ["us"])
+        if not keywords_only:
+            kws = sorted(kws, key=lambda k: prio_cc.index(k["country"]) if k["country"] in prio_cc else len(prio_cc))
         n_cand = cfg["candidates_per_run"] if discover and not keywords_only else 0
-        n_pool = int(cfg.get("pool_per_run", 100)) if discover and not keywords_only else 0
-        STATUS["total"] = len(kws) + (0 if keywords_only else len(countries) * (2 + 3 + 1 + n_cand + n_pool))
+        n_pool = int(cfg.get("pool_per_run", 0)) if discover and not keywords_only else 0
+        budget = float(cfg.get("time_budget_minutes", 0) or 0)
+        deadline = min(started + budget * 60 if budget else float("inf"), started + HARD_LIMIT_MIN * 60)
+        STATUS["total"] = len(kws) + (0 if keywords_only or hourly else len(countries) * 6)
 
         # 1. ma3lomat 3la app
         genres = ["6014"]
-        for cc in [] if keywords_only else countries:
+        for cc in [] if keywords_only or hourly else countries:
             STATUS["step"] = f"info:{cc.upper()}"
             try:
                 r = lookup([app_id], cc).get(app_id)
@@ -696,7 +736,7 @@ def run_job(discover=True, only_country=None, keyword_ids=None):
             STATUS["done"] += 2
 
         # 2. top charts
-        for cc in [] if keywords_only else countries:
+        for cc in [] if keywords_only or hourly else countries:
             STATUS["step"] = f"charts:{cc.upper()}"
             for g in genres[:3]:
                 try:
@@ -709,7 +749,11 @@ def run_job(discover=True, only_country=None, keyword_ids=None):
             STATUS["done"] += 3
 
         # 3. keywords li kantba3o
-        for k in kws:
+        hard_deadline = started + HARD_LIMIT_MIN * 60
+        for i, k in enumerate(kws):
+            if time.time() > hard_deadline:
+                log(f"Time limit: {len(kws) - i} tracked keywords left, the next run continues.")
+                break
             STATUS["step"] = f"keyword:{k['term']}|{k['country'].upper()}"
             try:
                 rank, depth, method, top_ids, subs = check_rank(k["term"], k["country"], app_id)
@@ -724,7 +768,7 @@ def run_job(discover=True, only_country=None, keyword_ids=None):
             STATUS["done"] += 1
 
         # 4. concurrents: chkoun kaybano m3ana o chno keywords dyalhom
-        for cc in [] if keywords_only else countries:
+        for cc in [] if keywords_only or hourly else countries:
             STATUS["step"] = f"competitors:{cc.upper()}"
             try:
                 analyze_competitors(cc, app_id, d)
@@ -742,17 +786,35 @@ def run_job(discover=True, only_country=None, keyword_ids=None):
             except Exception as e:
                 log(f"{cc.upper()} pool: {e}")
 
-        # 6. discovery: keywords jdad (ideas + pool)
-        found = 0
-        for cc in countries:
-            if not n_cand and not n_pool:
-                break
-            cands = generate_candidates(cc, cfg)[:n_cand]
-            cands += pool_candidates(cc, cfg, n_pool, {t for t, _ in cands})
-            for term, origin in cands:
+        # 6. discovery: keywords jdad (ideas + pool), bled b bled 7ta ykmel budget d w9t
+        found = tested = 0
+        queues = {}
+        if discover and not keywords_only:
+            for cc in countries:
+                q = generate_candidates(cc, cfg)[:n_cand]
+                # pool_per_run = 0 ➜ bla 7ad (budget d w9t howa li kay7bes)
+                q += pool_candidates(cc, cfg, n_pool if n_pool else 100000, {t for t, _ in q})
+                queues[cc] = q
+            STATUS["total"] = STATUS["done"] + sum(map(len, queues.values()))
+        prio = [c for c in cfg.get("priority_countries", ["us"]) if c in queues]
+        for cc in prio:
+            # f bled prioritaire: keywords b lugha par défaut (English f US) lwlin
+            main_lang = (COUNTRY_SEARCH_LANGS.get(cc) or ["en"])[0]
+            queues[cc].sort(key=lambda x: x[1].startswith("seed:") and x[1] != f"seed:{main_lang}")
+        while any(queues.values()):
+            pending = [c for c in prio if queues.get(c)]
+            for cc in (pending[:1] if pending else countries):
+                if not queues.get(cc):
+                    continue
+                if time.time() > deadline:
+                    log(f"Time budget reached: {sum(map(len, queues.values()))} keywords left for the next run.")
+                    queues = {}
+                    break
+                term, origin = queues[cc].pop(0)
                 STATUS["step"] = f"discovery:{term}|{cc.upper()}"
                 try:
-                    rank, depth, method, top_ids, subs = check_rank(term, cc, app_id)
+                    rank, depth, method, top_ids, subs = check_rank(term, cc, app_id, fast=True)
+                    tested += 1
                     with db() as con:
                         con.execute("INSERT OR REPLACE INTO candidates VALUES (?,?,?,?,?)", (term, cc, origin, d, rank))
                     if rank:
@@ -768,9 +830,10 @@ def run_job(discover=True, only_country=None, keyword_ids=None):
                 except Exception as e:
                     log(f"discovery '{term}' {cc}: {e}")
                 STATUS["done"] += 1
-            STATUS["done"] += n_cand + n_pool - len(cands)
+        if tested:
+            log(f"Discovery: {tested} keywords tested in {(time.time() - started) / 60:.0f} min (delay {_delay:.1f}s).")
 
-        if not only_country and not keywords_only:
+        if not only_country and not keywords_only and not hourly:
             meta_set("last_run", d)
             meta_set("last_run_at", datetime.datetime.now().isoformat(timespec="minutes"))
         meta_set("last_refresh_at", datetime.datetime.now().isoformat(timespec="minutes"))
@@ -1026,14 +1089,15 @@ class Handler(BaseHTTPRequestHandler):
             return self.send({"ok": True})
         if u.path == "/api/config":
             cfg = load_config()
-            for k in ("app_id", "countries", "daily_hour", "candidates_per_run", "pool_per_run", "my_keywords"):
+            for k in ("app_id", "countries", "daily_hour", "candidates_per_run", "pool_per_run", "time_budget_minutes", "my_keywords"):
                 if k in b:
                     cfg[k] = b[k]
             if isinstance(cfg["countries"], str):
                 cfg["countries"] = [c.strip().lower() for c in cfg["countries"].split(",") if c.strip()]
             cfg["daily_hour"] = int(cfg["daily_hour"])
             cfg["candidates_per_run"] = int(cfg["candidates_per_run"])
-            cfg["pool_per_run"] = int(cfg.get("pool_per_run", 100))
+            cfg["pool_per_run"] = int(cfg.get("pool_per_run", 0))
+            cfg["time_budget_minutes"] = int(cfg.get("time_budget_minutes", 0) or 0)
             save_config(cfg)
             return self.send({"ok": True, "config": cfg})
         self.send({"error": "not found"}, 404)
@@ -1096,10 +1160,14 @@ def main():
     ap.add_argument("--run", action="store_true", help="dir check wa7d o khrej (l GitHub Actions)")
     ap.add_argument("--no-discover", action="store_true", help="bla discovery dyal keywords jdad")
     ap.add_argument("--keywords", help='ghir had keywords: "all" wla "term|us;term2|fr"')
+    ap.add_argument("--hourly", action="store_true", help="ghir pool o discovery (run dyal kol sa3a)")
+    ap.add_argument("--auto", action="store_true",
+                    help="run dyal schedule: check kamel mra f nhar (mn daily_hour_utc), o f lb9i discovery")
     args = ap.parse_args()
     if not os.path.exists(CONFIG_PATH):
         save_config(DEFAULT_CONFIG)
     init_db()
+    migrate_db()
     cfg = load_config()
     sync_config_keywords(cfg)
     if args.run:
@@ -1109,7 +1177,13 @@ def main():
                 rows = con.execute("SELECT id, term, country FROM keywords").fetchall()
             wanted = {w.strip().lower() for w in args.keywords.split(";") if w.strip()}
             keyword_ids = [r["id"] for r in rows if "all" in wanted or f"{r['term']}|{r['country']}" in wanted]
-        run_job(discover=not args.no_discover, keyword_ids=keyword_ids)
+        hourly = args.hourly
+        if args.auto:
+            # GitHub ymken yt2kher f schedule: check kamel ila mazal ma tdar lyoum o fatt sa3a dyalo
+            now = datetime.datetime.now(datetime.timezone.utc)
+            hourly = not (meta_get("last_run") != now.date().isoformat() and now.hour >= int(cfg.get("daily_hour_utc", 3)))
+            log("Mode: " + ("hourly discovery" if hourly else "daily full check"))
+        run_job(discover=not args.no_discover, keyword_ids=keyword_ids, hourly=hourly)
         export_static()
         if STATUS["error"]:
             raise SystemExit("Error: " + STATUS["error"])

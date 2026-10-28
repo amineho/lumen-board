@@ -1,2 +1,5 @@
 __pycache__/
 *.pyc
+# data katkoun f branch "data"
+aso.db
+docs/data/

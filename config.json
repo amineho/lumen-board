@@ -12,7 +12,7 @@
   ],
   "port": 8080,
   "daily_hour": 9,
-  "candidates_per_run": 60,
+  "candidates_per_run": 150,
   "my_keywords": "",
   "manual_keywords": [
     "basketball.io",
@@ -24,5 +24,10 @@
     "5v5 basketball"
   ],
   "removed_keywords": [],
-  "pool_per_run": 100
+  "pool_per_run": 0,
+  "time_budget_minutes": 50,
+  "priority_countries": [
+    "us"
+  ],
+  "daily_hour_utc": 3
 }
