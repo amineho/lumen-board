@@ -38,7 +38,7 @@ DEFAULT_CONFIG = {
     "countries": ["us", "gb", "ca", "au", "fr", "de", "ma", "sa"],
     "port": 8080,
     "daily_hour": 9,
-    "candidates_per_run": 40,
+    "candidates_per_run": 60,
     "my_keywords": "",
     # keywords li kantba3o: "term" = f kol l bldan, "term|us" = f bled wa7d
     "manual_keywords": [],
@@ -68,6 +68,31 @@ COUNTRY_LANGS = {
     "qa": ["ar"], "kw": ["ar"], "bh": ["ar"], "om": ["ar"], "jo": ["ar"], "lb": ["ar", "fr_fr"], "iq": ["ar"],
     "ca": ["fr_ca"], "be": ["fr_fr"], "ch": ["de_de", "fr_fr"], "us": ["es_mx"], "il": ["he"], "in": ["hi"],
 }
+# Lughat li kay9elbo bihom nas f kol bled (machi ghir lugha dyal store): MA b l3arabiya, lfransawiya o l'anglais...
+COUNTRY_SEARCH_LANGS = {
+    "us": ["en", "es"], "gb": ["en"], "ca": ["en", "fr"], "au": ["en"], "nz": ["en"], "ie": ["en"], "in": ["en"],
+    "fr": ["fr", "en"], "be": ["fr", "nl", "en"], "ch": ["de", "fr", "it", "en"], "lu": ["fr", "de", "en"],
+    "de": ["de", "en"], "at": ["de", "en"], "nl": ["nl", "en"], "pl": ["pl", "en"],
+    "es": ["es", "en"], "mx": ["es", "en"], "ar": ["es", "en"], "co": ["es", "en"], "cl": ["es", "en"], "pe": ["es", "en"],
+    "br": ["pt", "en"], "pt": ["pt", "en"], "it": ["it", "en"], "tr": ["tr", "en"], "ru": ["ru", "en"],
+    "jp": ["ja", "en"], "kr": ["ko", "en"], "cn": ["zh"], "tw": ["zh", "en"], "hk": ["zh", "en"],
+    "id": ["id", "en"], "my": ["en", "id"], "ph": ["en"], "sg": ["en", "zh"],
+    "ma": ["ar", "fr", "en"], "dz": ["ar", "fr", "en"], "tn": ["ar", "fr", "en"], "lb": ["ar", "fr", "en"],
+    "sa": ["ar", "en"], "ae": ["ar", "en"], "eg": ["ar", "en"], "qa": ["ar", "en"], "kw": ["ar", "en"],
+    "bh": ["ar", "en"], "om": ["ar", "en"], "jo": ["ar", "en"], "iq": ["ar", "en"],
+}
+SEEDS_PATH = os.path.join(BASE, "seeds.json")
+
+
+def load_seeds():
+    """seeds.json: keywords momkinin b kol lugha (katbdelhom b yddek)."""
+    try:
+        with open(SEEDS_PATH, encoding="utf-8") as f:
+            return json.load(f)
+    except (OSError, ValueError):
+        return {}
+
+
 CJK = re.compile(r"[\u3040-\u30ff\u3400-\u9fff\uac00-\ud7af]")
 
 # Marques dyal nas khrin: Apple katrefd app ila 7tetihom f smiya wla keywords
@@ -443,6 +468,11 @@ def generate_candidates(country, cfg):
 
     for k in my_kw:
         add(k, 100, "my_keywords")
+    # keywords b kol lughat dyal had lbled (tartib dyal seeds.json = priorité)
+    seeds = load_seeds()
+    for lang in COUNTRY_SEARCH_LANGS.get(country, ["en"]):
+        for i, term in enumerate(seeds.get(lang, [])):
+            add(term.lower(), 72 - i * 0.2, f"seed:{lang}")
     for w in own_words:
         add(w, 60 + market_uni[w] * 5, "own_title")
     for p in phrases(title_text, 2):

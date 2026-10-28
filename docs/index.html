@@ -393,12 +393,12 @@ const I18N = {
     compHelp: "Games in your category that appear most often in the top 10 of your keywords. Their keywords come from their name and description, because the App Store Connect keyword field is private. Every day the tracker tests your game on these keywords and adds the ones where it ranks.",
     appearsIn: "In your keywords", avgPos: "Avg. position", theirKw: "Their keywords",
     lgRanked: "you rank", lgTracked: "tracked, not ranking", lgTested: "tested, not ranking", lgNew: "not tested yet",
-    emptyCo: "No competitor data yet. It appears after the next full check.", oCompApp: "Competitor: {name}", stCompetitors: "Competitors ({c})",
+    emptyCo: "No competitor data yet. It appears after the next full check.", oCompApp: "Competitor: {name}", oSeed: "Keyword list · {lang}", stCompetitors: "Competitors ({c})",
     refreshKw: "Refresh rank", chartKw: "Rank history", del: "Remove", confirmDelete: "Remove this keyword?",
     emptyKw: "No keywords yet. Add some above or run a full check.",
     serpTitle: "Top 10 for “{k}”", app: "App",
     discoveryHowTitle: "How it works",
-    discoveryHow: "Every day the tracker builds new keyword ideas from your app's name, subtitle and description, from the App Store Connect keywords in Settings, and from the names and subtitles of competing apps in search results. It tests each one. When your app ranks for it, the keyword is added to the Keywords list with an <span class=\"badge auto\">auto</span> badge and tracked daily. Keywords where your app doesn't rank are retested after 7 days.",
+    discoveryHow: "Every day the tracker builds new keyword ideas from your app's name, subtitle and description, from the App Store Connect keywords in Settings, from the names and descriptions of your competitors, and from a list of basketball keywords in 15 languages (<code>seeds.json</code>). In each country it searches in the languages people use there, for example Arabic, French and English in Morocco, or Arabic and English in Saudi Arabia. It tests each one. When your app ranks for it, the keyword is added to the Keywords list with an <span class=\"badge auto\">auto</span> badge and tracked daily. Keywords where your app doesn't rank are retested after 7 days.",
     result: "Result", rankedOk: "Ranking ✅", notRanking: "not ranking", origin: "Origin", tested: "Tested",
     emptyCd: "No keywords tested yet. Run a full check.",
     oMy: "Your keywords", oOwn: "Your name/subtitle", oComp: "Competitors ({n}×)", oDesc: "Your description", oCombo: "Combination",
@@ -468,12 +468,12 @@ const I18N = {
     compHelp: "ألعاب من فئتك تظهر أكثر من غيرها في أفضل 10 نتائج لكلماتك المفتاحية. كلماتها المفتاحية مستخرجة من اسمها ووصفها، لأن حقل الكلمات المفتاحية في App Store Connect خاص. يختبر المتتبّع لعبتك يوميًا على هذه الكلمات ويضيف التي تظهر فيها.",
     appearsIn: "في كلماتك المفتاحية", avgPos: "متوسط الترتيب", theirKw: "كلماتهم المفتاحية",
     lgRanked: "تظهر فيها", lgTracked: "مُتتبَّعة ولا تظهر", lgTested: "اختُبرت ولا تظهر", lgNew: "لم تُختبر بعد",
-    emptyCo: "لا توجد بيانات عن المنافسين بعد. ستظهر بعد الفحص الكامل القادم.", oCompApp: "منافس: {name}", stCompetitors: "المنافسون ({c})",
+    emptyCo: "لا توجد بيانات عن المنافسين بعد. ستظهر بعد الفحص الكامل القادم.", oCompApp: "منافس: {name}", oSeed: "قائمة الكلمات · {lang}", stCompetitors: "المنافسون ({c})",
     refreshKw: "تحديث الترتيب", chartKw: "سجل الترتيب", del: "حذف", confirmDelete: "هل تريد حذف هذه الكلمة المفتاحية؟",
     emptyKw: "لا توجد كلمات مفتاحية بعد. أضف بعضها في الأعلى أو شغّل فحصًا كاملًا.",
     serpTitle: "أفضل 10 نتائج لـ «{k}»", app: "التطبيق",
     discoveryHowTitle: "كيف يعمل",
-    discoveryHow: "يولّد المتتبّع كل يوم أفكارًا لكلمات مفتاحية جديدة من اسم تطبيقك وعنوانه الفرعي ووصفه، ومن كلمات App Store Connect المحفوظة في الإعدادات، ومن أسماء التطبيقات المنافسة وعناوينها الفرعية في نتائج البحث. ثم يختبر كل كلمة، فإذا ظهر تطبيقك فيها أُضيفت إلى قائمة الكلمات المفتاحية بشارة <span class=\"badge auto\">تلقائي</span> وتُتبَّع يوميًا. أما الكلمات التي لا يظهر فيها تطبيقك فيُعاد اختبارها بعد 7 أيام.",
+    discoveryHow: "يولّد المتتبّع كل يوم أفكارًا لكلمات مفتاحية جديدة من اسم تطبيقك وعنوانه الفرعي ووصفه، ومن كلمات App Store Connect المحفوظة في الإعدادات، ومن أسماء منافسيك وأوصافهم، ومن قائمة كلمات كرة السلة بـ15 لغة (<code>seeds.json</code>). ويبحث في كل دولة باللغات التي يستخدمها الناس فيها، مثل العربية والفرنسية والإنجليزية في المغرب، أو العربية والإنجليزية في السعودية. ثم يختبر كل كلمة، فإذا ظهر تطبيقك فيها أُضيفت إلى قائمة الكلمات المفتاحية بشارة <span class=\"badge auto\">تلقائي</span> وتُتبَّع يوميًا. أما الكلمات التي لا يظهر فيها تطبيقك فيُعاد اختبارها بعد 7 أيام.",
     result: "النتيجة", rankedOk: "يظهر ✅", notRanking: "لا يظهر", origin: "المصدر", tested: "تاريخ الاختبار",
     emptyCd: "لم تُختبر أي كلمة بعد. شغّل فحصًا كاملًا.",
     oMy: "كلماتك المفتاحية", oOwn: "اسم تطبيقك/عنوانه الفرعي", oComp: "المنافسون ({n}×)", oDesc: "وصف تطبيقك", oCombo: "تركيب كلمات",
@@ -534,6 +534,7 @@ const num = n => (n ?? 0).toLocaleString(locale());
 function originLabel(o) {
   o = LEGACY_ORIGINS[o] || o || "";
   if (o.startsWith("competitor:")) return t("oCompApp", {name: o.slice(11)});
+  if (o.startsWith("seed:")) return t("oSeed", {lang: o.slice(5).toUpperCase()});
   const m = o.match(/^(?:competitors:|concurrents \()(\d+)/);
   if (m) return t("oComp", {n: m[1]});
   return {my_keywords: t("oMy"), own_title: t("oOwn"), description: t("oDesc"), combo: t("oCombo")}[o] || o;
