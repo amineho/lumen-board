@@ -1,0 +1,545 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ASO Tracker</title>
+<style>
+:root {
+  --bg: #f6f7f9; --card: #ffffff; --text: #16181d; --muted: #667085; --line: #e4e7ec;
+  --accent: #2f6fed; --accent-soft: #e8f0fe; --good: #138a4b; --good-soft: #e6f6ed;
+  --bad: #c4321c; --bad-soft: #fdecea; --warn: #9a6700; --warn-soft: #fff4d6;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0f1115; --card: #171a21; --text: #e7e9ee; --muted: #98a2b3; --line: #2a2f3a;
+    --accent: #6b9cff; --accent-soft: #1c2a47; --good: #4ade80; --good-soft: #143322;
+    --bad: #ff7b6b; --bad-soft: #3a1d1a; --warn: #f5c451; --warn-soft: #3a2f12;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0f1115; --card: #171a21; --text: #e7e9ee; --muted: #98a2b3; --line: #2a2f3a;
+  --accent: #6b9cff; --accent-soft: #1c2a47; --good: #4ade80; --good-soft: #143322;
+  --bad: #ff7b6b; --bad-soft: #3a1d1a; --warn: #f5c451; --warn-soft: #3a2f12;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--text); font: 14px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+.wrap { max-width: 1180px; margin: 0 auto; padding-block: 20px 60px; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+header { display: flex; gap: 14px; align-items: center; flex-wrap: wrap; }
+header img { width: 64px; height: 64px; border-radius: 14px; border: 1px solid var(--line); }
+header h1 { margin: 0; font-size: 20px; }
+header .sub { color: var(--muted); }
+header .actions { margin-left: auto; display: flex; gap: 8px; flex-wrap: wrap; }
+button { font: inherit; border: 1px solid var(--line); background: var(--card); color: var(--text); padding: 7px 14px; border-radius: 8px; cursor: pointer; }
+button.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+button:disabled { opacity: .5; cursor: default; }
+button.small { padding: 3px 9px; font-size: 12px; }
+nav { display: flex; gap: 4px; margin: 20px 0 16px; border-bottom: 1px solid var(--line); overflow-x: auto; }
+nav button { border: 0; background: none; border-bottom: 2px solid transparent; border-radius: 0; padding: 9px 14px; color: var(--muted); white-space: nowrap; }
+nav button.on { color: var(--text); border-bottom-color: var(--accent); font-weight: 600; }
+.card { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 16px; margin-bottom: 16px; }
+.card h2 { margin: 0 0 12px; font-size: 15px; }
+.grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 12px; margin-bottom: 16px; }
+.stat { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 14px; }
+.stat .v { font-size: 24px; font-weight: 650; }
+.stat .l { color: var(--muted); font-size: 12px; }
+.tablewrap { overflow-x: auto; }
+table { width: 100%; border-collapse: collapse; }
+th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--line); white-space: nowrap; }
+th { color: var(--muted); font-weight: 500; font-size: 12px; cursor: pointer; user-select: none; }
+tr.click { cursor: pointer; }
+tr.click:hover td { background: var(--accent-soft); }
+.badge { display: inline-block; padding: 1px 8px; border-radius: 99px; font-size: 12px; background: var(--accent-soft); color: var(--accent); }
+.badge.auto { background: var(--good-soft); color: var(--good); }
+.rank { font-weight: 650; font-variant-numeric: tabular-nums; }
+.up { color: var(--good); } .down { color: var(--bad); } .muted { color: var(--muted); }
+.yes { color: var(--good); } .no { color: var(--muted); }
+textarea, input, select { font: inherit; color: var(--text); background: var(--bg); border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px; width: 100%; }
+textarea { min-height: 80px; resize: vertical; }
+label { display: block; font-size: 12px; color: var(--muted); margin: 10px 0 4px; }
+.row { display: flex; gap: 12px; flex-wrap: wrap; align-items: flex-end; }
+.row > * { flex: 1; min-width: 160px; }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.chips label { margin: 0; display: inline-flex; align-items: center; gap: 4px; border: 1px solid var(--line); border-radius: 99px; padding: 3px 10px; color: var(--text); cursor: pointer; }
+.chips input { width: auto; }
+.progress { height: 6px; background: var(--line); border-radius: 9px; overflow: hidden; margin: 8px 0; }
+.progress div { height: 100%; background: var(--accent); width: 0; transition: width .3s; }
+.log { font: 12px/1.6 ui-monospace, Menlo, Consolas, monospace; color: var(--muted); max-height: 160px; overflow: auto; white-space: pre-wrap; }
+.note { background: var(--warn-soft); color: var(--warn); border-radius: 8px; padding: 8px 12px; font-size: 13px; margin-bottom: 12px; }
+.hidden { display: none; }
+svg.spark { vertical-align: middle; }
+.desc { white-space: pre-wrap; color: var(--muted); max-height: 220px; overflow: auto; }
+.kv { display: grid; grid-template-columns: 140px 1fr; gap: 6px 12px; }
+.kv div:nth-child(odd) { color: var(--muted); }
+.serp td:first-child { width: 30px; }
+.serp tr.me td { background: var(--good-soft); font-weight: 600; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <img id="icon" alt="" hidden>
+    <div>
+      <h1 id="appname">ASO Tracker</h1>
+      <div class="sub" id="appsub">…</div>
+    </div>
+    <div class="actions">
+      <button id="runQuick">Check ranks daba</button>
+      <button id="runFull" class="primary">Check + Discovery</button>
+    </div>
+  </header>
+
+  <div class="note hidden" id="flash" style="margin-top:16px"></div>
+
+  <div class="card hidden" id="statusCard" style="margin-top:16px">
+    <div><b id="stStep"></b> <span class="muted" id="stCount"></span></div>
+    <div class="progress"><div id="stBar"></div></div>
+    <div class="log" id="stLog"></div>
+  </div>
+
+  <nav id="tabs">
+    <button data-tab="overview" class="on">Overview</button>
+    <button data-tab="keywords">Keywords</button>
+    <button data-tab="discovery">Discovery</button>
+    <button data-tab="analysis">Analyse</button>
+    <button data-tab="charts">Top charts</button>
+    <button data-tab="settings">Settings</button>
+  </nav>
+
+  <!-- OVERVIEW -->
+  <section id="tab-overview">
+    <div class="grid" id="stats"></div>
+    <div class="card">
+      <h2>Ma3lomat 3la app</h2>
+      <div class="row" style="margin-bottom:10px"><div style="max-width:200px"><select id="infoCountry"></select></div></div>
+      <div class="kv" id="infoKv"></div>
+    </div>
+    <div class="card">
+      <h2>Ratings f kol bled</h2>
+      <div class="tablewrap"><table id="ratingsTable"></table></div>
+    </div>
+    <div class="card">
+      <h2>Description</h2>
+      <div class="desc" id="desc"></div>
+    </div>
+  </section>
+
+  <!-- KEYWORDS -->
+  <section id="tab-keywords" class="hidden">
+    <div class="card">
+      <h2>Zid keywords</h2>
+      <label>Keywords (kol wa7d f ster, wla fr9hom b virgule)</label>
+      <textarea id="newTerms" placeholder="basketball game&#10;slam dunk&#10;streetball"></textarea>
+      <label>F had l bldan</label>
+      <div class="chips" id="addCountries"></div>
+      <div style="margin-top:12px"><button class="primary" id="addBtn">Zid</button> <span class="muted" id="addMsg"></span></div>
+    </div>
+    <div class="card">
+      <div class="row" style="margin-bottom:10px">
+        <div><label>Bled</label><select id="kwCountry"></select></div>
+        <div><label>Source</label><select id="kwSource"><option value="">Kolchi</option><option value="manual">Zditiha nta</option><option value="auto">Tl9at automatiquement</option></select></div>
+        <div><label>Rank</label><select id="kwRanked"><option value="">Kolchi</option><option value="1">Ghir li ranké fihom</option><option value="0">Ghir li machi ranké</option></select></div>
+        <div><label>9elleb</label><input id="kwSearch" placeholder="keyword…"></div>
+      </div>
+      <div class="tablewrap"><table id="kwTable"></table></div>
+    </div>
+    <div class="card hidden" id="serpCard">
+      <h2 id="serpTitle"></h2>
+      <div class="tablewrap"><table class="serp" id="serpTable"></table></div>
+    </div>
+  </section>
+
+  <!-- DISCOVERY -->
+  <section id="tab-discovery" class="hidden">
+    <div class="card">
+      <h2>Kifach kaykhdem</h2>
+      <div class="muted">Kol nhar, tool kayjm3 keywords jdad mn smiya, subtitle o description dyalk, mn keywords li ktbti f Settings, o mn smiyat o subtitles dyal concurrents li kaybano f search. Kaytesti kol wa7d, o ila l9a app dyalk ranké fih, kayzido wa7do l liste dyal Keywords (b badge <span class="badge auto">auto</span>) o kayb9a ytba3o kol nhar. Keywords li ma ranké fihom kayt3awdo ytestaw mn ba3d 7 iyam.</div>
+    </div>
+    <div class="card">
+      <div class="row" style="margin-bottom:10px">
+        <div><label>Bled</label><select id="cdCountry"></select></div>
+        <div><label>Natija</label><select id="cdRanked"><option value="">Kolchi</option><option value="1">Ranké ✅</option><option value="0">Machi ranké</option></select></div>
+      </div>
+      <div class="tablewrap"><table id="cdTable"></table></div>
+    </div>
+  </section>
+
+  <!-- ANALYSIS -->
+  <section id="tab-analysis" class="hidden">
+    <div class="card">
+      <h2>Kalimat li kaykhdmo bihom concurrents</h2>
+      <div class="muted" style="margin-bottom:10px">Had kalimat jat mn smiyat o subtitles dyal apps li kaybano f awel resultats dyal keywords dyalk. Kalma li kayna bzzaf 3nd concurrents o ma kaynach f smiya/subtitle wla keywords dyalk = fors bach tzidha.</div>
+      <div class="row" style="margin-bottom:10px"><div style="max-width:200px"><select id="anCountry"></select></div></div>
+      <div class="tablewrap"><table id="anTable"></table></div>
+    </div>
+  </section>
+
+  <!-- CHARTS -->
+  <section id="tab-charts" class="hidden">
+    <div class="card">
+      <h2>Rank f top charts (Top Free, top 100)</h2>
+      <div class="tablewrap"><table id="chTable"></table></div>
+    </div>
+  </section>
+
+  <!-- SETTINGS -->
+  <section id="tab-settings" class="hidden">
+    <div class="card">
+      <h2>Settings</h2>
+      <div class="row">
+        <div><label>Apple ID dyal app</label><input id="cfgApp"></div>
+        <div id="cfgHourWrap"><label>Sa3a dyal check kol nhar (0-23)</label><input id="cfgHour" type="number" min="0" max="23"></div>
+        <div><label>Ch7al mn keyword jdid ytesta f kol bled</label><input id="cfgCand" type="number" min="0" max="200"></div>
+      </div>
+      <label>L bldan (codes b virgule: us, gb, fr, ma, sa…)</label>
+      <input id="cfgCountries">
+      <label>Keywords dyalk f App Store Connect (l 100 7arf)</label>
+      <textarea id="cfgKw" placeholder="basketball,dunk,hoops,streetball,…"></textarea>
+      <div style="margin-top:12px"><button class="primary" id="saveCfg">Sjjel</button> <span class="muted" id="cfgMsg"></span></div>
+    </div>
+    <div class="card hidden" id="ghCard">
+      <h2>GitHub</h2>
+      <div class="muted">Had page kat9ra data mn GitHub. Bach tzid keywords, tbdel settings wla tbda check mn hna, khass <b>token</b> dyal GitHub. Token kayb9a ghir f had browser, ma kaytsjjel f 7ta blasa khra.</div>
+      <div class="row">
+        <div><label>Repo</label><input id="ghRepo" placeholder="owner/repo"></div>
+        <div><label>Token</label><input id="ghToken" type="password" placeholder="github_pat_…" autocomplete="off"></div>
+      </div>
+      <div style="margin-top:12px"><button class="primary" id="ghSave">Sjjel token</button> <span class="muted" id="ghMsg"></span></div>
+      <label>Kifach tsawb token (mra wa7da)</label>
+      <ol class="muted" style="margin:4px 0 0; padding-left:20px">
+        <li>7ell <a href="https://github.com/settings/personal-access-tokens/new" target="_blank" rel="noopener">github.com/settings/personal-access-tokens/new</a></li>
+        <li>Token name: <b>dashboard</b>, Expiration: li bghiti</li>
+        <li>Repository access: <b>Only select repositories</b> ➜ khtar <b id="ghRepoName">aso-tracker</b></li>
+        <li>Permissions ➜ Repository permissions: <b>Contents: Read and write</b> o <b>Actions: Read and write</b></li>
+        <li>Generate token, kopi-h o 7ett-h hna</li>
+      </ol>
+      <div class="muted" style="margin-top:10px">Check automatique kaytdar kol nhar f <b>08:17 UTC</b> (09:17 f lmaghrib). Sa3a katbdel f <code>.github/workflows/track.yml</code>. <a id="ghActions" href="#" target="_blank" rel="noopener">Chouf runs f GitHub Actions</a></div>
+    </div>
+    <div class="card">
+      <h2>Mode dyal search</h2>
+      <div id="apiMode" class="muted"></div>
+    </div>
+  </section>
+</div>
+
+<script>
+const $ = s => document.querySelector(s);
+const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const flag = cc => cc.toUpperCase().replace(/./g, c => String.fromCodePoint(127397 + c.charCodeAt(0)));
+let S = null, KW = [], CD = [], tab = "overview";
+
+// Local (python tracker.py): kolchi kaytdar b /api/*. F GitHub Pages: data kat t9ra mn data/*.json,
+// o l bdil (keywords, settings, check) kaytdar b GitHub API: kaybdel config.json o kaybda workflow.
+const LOCAL = /^(localhost|127\.0\.0\.1)$/.test(location.hostname);
+const store = {
+  get: k => { try { return localStorage.getItem(k) || ""; } catch { return ""; } },
+  set: (k, v) => { try { localStorage.setItem(k, v); } catch {} },
+};
+const GH = {
+  repo: () => store.get("aso_repo") || `${location.hostname.split(".")[0]}/${location.pathname.split("/")[1] || "aso-tracker"}`,
+  token: () => store.get("aso_token"),
+};
+let staticCache = {};
+const staticGet = name => staticCache[name] ??= fetch(`data/${name}?t=${Date.now()}`).then(r => r.ok ? r.json() : null);
+
+async function ghApi(path, opts = {}) {
+  if (!GH.token()) throw new Error("Khass GitHub token. Zido f Settings ➜ GitHub.");
+  const r = await fetch(`https://api.github.com/repos/${GH.repo()}${path}`, {...opts, headers: {
+    Authorization: `Bearer ${GH.token()}`, Accept: "application/vnd.github+json", "Content-Type": "application/json"}});
+  if (!r.ok) {
+    const m = (await r.json().catch(() => ({}))).message || "";
+    throw new Error(r.status === 401 || r.status === 403 ? `GitHub rfed token (${r.status}). Tfta9 bli 3ndo Contents o Actions: Read and write. ${m}` : `GitHub ${r.status}: ${m}`);
+  }
+  return r.status === 204 ? {} : r.json();
+}
+async function editConfig(change) {
+  const f = await ghApi("/contents/config.json");
+  const cfg = JSON.parse(new TextDecoder().decode(Uint8Array.from(atob(f.content.replace(/\n/g, "")), c => c.charCodeAt(0))));
+  const message = change(cfg);
+  let bin = "";
+  new TextEncoder().encode(JSON.stringify(cfg, null, 2) + "\n").forEach(b => bin += String.fromCharCode(b));
+  await ghApi("/contents/config.json", {method: "PUT", body: JSON.stringify({message, content: btoa(bin), sha: f.sha})});
+}
+// nefs l logique dyal config_add_keywords / config_remove_keyword f tracker.py
+function configAdd(cfg, terms, countries) {
+  const every = cfg.countries.every(c => countries.includes(c));
+  const entries = every ? terms : terms.flatMap(t => countries.map(c => `${t}|${c}`));
+  cfg.manual_keywords = [...new Set([...(cfg.manual_keywords || []), ...entries])];
+  const added = new Set(terms.flatMap(t => countries.map(c => `${t}|${c}`)));
+  cfg.removed_keywords = (cfg.removed_keywords || []).filter(r => !added.has(r));
+}
+function configRemove(cfg, term, country) {
+  cfg.manual_keywords = (cfg.manual_keywords || []).filter(m => m !== `${term}|${country}`);
+  cfg.removed_keywords = [...new Set([...(cfg.removed_keywords || []), `${term}|${country}`])];
+}
+
+async function api(p, body) {
+  if (LOCAL) return fetch(p, body ? {method: "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify(body)} : {}).then(r => r.json());
+  const u = new URL(p, location.origin);
+  if (!body) {
+    if (u.pathname === "/api/state") return staticGet("state.json");
+    if (u.pathname === "/api/keywords") return (await staticGet("keywords.json")) || [];
+    if (u.pathname === "/api/candidates") return (await staticGet("candidates.json")) || [];
+    if (u.pathname === "/api/serp") return ((await staticGet("serp.json")) || {})[u.searchParams.get("id")] || {apps: []};
+    if (u.pathname === "/api/analysis") return ((await staticGet("analysis.json")) || {})[u.searchParams.get("country")] || {words: [], sample: 0};
+  }
+  if (u.pathname === "/api/keywords") {
+    const terms = body.terms.split(/[,\n]/).map(t => t.trim().toLowerCase()).filter(Boolean);
+    await editConfig(cfg => { configAdd(cfg, terms, body.countries); return `Zid keywords: ${terms.join(", ")}`; });
+    return {added: terms.length * body.countries.length, github: true};
+  }
+  if (u.pathname === "/api/keywords/delete") {
+    const gone = KW.filter(k => body.ids.includes(k.id));
+    await editConfig(cfg => { gone.forEach(k => configRemove(cfg, k.term, k.country)); return `7ayed keywords: ${gone.map(k => k.term + "|" + k.country).join(", ")}`; });
+    return {ok: true, github: true};
+  }
+  if (u.pathname === "/api/config") {
+    await editConfig(cfg => {
+      cfg.app_id = body.app_id; cfg.candidates_per_run = +body.candidates_per_run; cfg.my_keywords = body.my_keywords;
+      cfg.countries = body.countries.split(",").map(c => c.trim().toLowerCase()).filter(Boolean);
+      return "Bdel settings";
+    });
+    return {ok: true, github: true};
+  }
+  if (u.pathname === "/api/run") {
+    await ghApi("/actions/workflows/track.yml/dispatches", {method: "POST", body: JSON.stringify({ref: "main", inputs: {discover: String(body.discover)}})});
+    return {ok: true, github: true};
+  }
+}
+
+function flash(msg, bad) {
+  const f = $("#flash");
+  f.innerHTML = msg; f.classList.remove("hidden");
+  f.style.background = bad ? "var(--bad-soft)" : ""; f.style.color = bad ? "var(--bad)" : "";
+}
+const actionsUrl = () => `https://github.com/${GH.repo()}/actions`;
+const GH_WAIT = `Ghaybda check f GitHub daba. Data jdida ghatban f had page mn ba3d chi <b>3 l 10 d9aye9</b> (dir refresh). <a href="${actionsUrl()}" target="_blank" rel="noopener">Tba3o f GitHub Actions</a>`;
+async function ghRunStatus() {
+  if (LOCAL || !GH.token()) return;
+  try {
+    const r = await ghApi("/actions/runs?per_page=1");
+    const run = r.workflow_runs?.[0];
+    if (run && run.status !== "completed") flash(`⏳ Check khdam daba f GitHub (${run.status}). Dir refresh mn ba3d chwiya. <a href="${run.html_url}" target="_blank" rel="noopener">Tba3o</a>`);
+    else if (run && run.conclusion === "failure") flash(`Akher check f GitHub ma khdamch. <a href="${run.html_url}" target="_blank" rel="noopener">Chouf l error</a>`, true);
+  } catch (e) { flash(esc(e.message), true); }
+}
+
+function spark(hist) {
+  const pts = hist.slice(-30);
+  if (pts.length < 2) return "";
+  const W = 90, H = 24, max = Math.max(...pts.map(p => p.rank || p.depth || 11), 11);
+  const xy = pts.map((p, i) => [i * W / (pts.length - 1), p.rank ? 2 + (p.rank - 1) / (max - 1) * (H - 4) : H - 1]);
+  const d = xy.map((p, i) => (i ? "L" : "M") + p[0].toFixed(1) + " " + p[1].toFixed(1)).join(" ");
+  return `<svg class="spark" width="${W}" height="${H}"><path d="${d}" fill="none" stroke="var(--accent)" stroke-width="1.5"/></svg>`;
+}
+function delta(k) {
+  if (!k.rank && !k.prev) return "";
+  if (k.rank && !k.prev) return `<span class="up">jdid</span>`;
+  if (!k.rank && k.prev) return `<span class="down">tl3 mn top</span>`;
+  const d = k.prev - k.rank;
+  return d > 0 ? `<span class="up">▲ ${d}</span>` : d < 0 ? `<span class="down">▼ ${-d}</span>` : `<span class="muted">=</span>`;
+}
+function rankCell(k) {
+  if (!k.checked) return `<span class="muted">mazal</span>`;
+  return k.rank ? `<span class="rank">#${k.rank}</span>` : `<span class="muted">&gt; ${k.depth || "?"}</span>`;
+}
+function fillCountrySelect(sel, withAll) {
+  const v = sel.value;
+  sel.innerHTML = (withAll ? `<option value="">Kol l bldan</option>` : "") + S.config.countries.map(c => `<option value="${c}">${flag(c)} ${c.toUpperCase()}</option>`).join("");
+  if (v && [...sel.options].some(o => o.value === v)) sel.value = v;
+}
+
+async function loadState() {
+  S = await api("/api/state");
+  if (!S) {
+    flash(`Mazal ma kayn data. Awel check khassha tkmel f GitHub Actions. <a href="${actionsUrl()}" target="_blank" rel="noopener">Chouf runs</a>`);
+    throw new Error("no data");
+  }
+  const cc = S.config.countries;
+  const info = S.info[cc.find(c => S.info[c]) || cc[0]] || {};
+  if (info.icon) $("#icon").src = info.icon;
+  $("#icon").hidden = !info.icon;
+  $("#appname").textContent = info.name || "ASO Tracker";
+  $("#appsub").textContent = [info.subtitle, info.seller].filter(Boolean).join(" · ") + (S.last_run_at ? `  ·  akher check: ${S.last_run_at.replace("T", " ")}` : "  ·  mazal ma tdar ta check");
+  [["#infoCountry"], ["#kwCountry", 1], ["#cdCountry", 1], ["#anCountry"]].forEach(([s, a]) => fillCountrySelect($(s), a));
+  $("#addCountries").innerHTML = cc.map(c => `<label><input type="checkbox" value="${c}" checked> ${flag(c)} ${c.toUpperCase()}</label>`).join("");
+  $("#cfgApp").value = S.config.app_id; $("#cfgHour").value = S.config.daily_hour; $("#cfgCand").value = S.config.candidates_per_run;
+  $("#cfgCountries").value = cc.join(", "); $("#cfgKw").value = S.config.my_keywords;
+  $("#apiMode").innerHTML = S.api_mode === "blocked"
+    ? `⚠️ Apple bloquat search API mn had l internet. Tool kaychouf ghir <b>awel ~10 resultats</b> f kol keyword (tartib l7a9i9i dyal App Store). Ila khdmti b tool mn PC dyalk f dar, ghaliban ghaychouf 7ta <b>#200</b>.`
+    : S.api_mode === "ok" ? `✅ Search API khdama: tool kaychouf rank 7ta <b>#200</b>.` : `Mazal ma tdar ta check.`;
+  renderInfo(); renderCharts(); renderStatus(S.status);
+}
+
+function renderInfo() {
+  const c = $("#infoCountry").value, i = S.info[c];
+  if (!i) { $("#infoKv").innerHTML = `<div class="muted">Mazal ma kayn data. Brek 3la "Check ranks daba".</div><div></div>`; $("#desc").textContent = ""; }
+  else {
+    const rows = [["Smiya", i.name], ["Subtitle", i.subtitle || "—"], ["Developer", i.seller], ["Rating", i.rating ? `⭐ ${i.rating.toFixed(2)} (${i.ratings} ratings)` : "Mazal ma kayn"],
+      ["Version", i.version], ["Akher update", (i.updated || "").slice(0, 10)], ["Tl3at f", (i.released || "").slice(0, 10)], ["Categories", (i.genres || []).filter((g, n, a) => a.indexOf(g) === n).join(", ")],
+      ["Size", i.size_mb + " MB"], ["iOS minimum", i.min_ios], ["Age", i.age], ["Thaman", i.price], ["Lughat", (i.languages || []).join(", ")], ["Lien", `<a href="${esc(i.url)}" target="_blank">App Store</a>`]];
+    $("#infoKv").innerHTML = rows.map(([k, v]) => `<div>${k}</div><div>${k === "Lien" ? v : esc(v)}</div>`).join("");
+    $("#desc").textContent = i.description;
+  }
+  $("#ratingsTable").innerHTML = `<tr><th>Bled</th><th>Rating</th><th>Ratings</th><th>Version</th></tr>` + S.config.countries.map(cc => {
+    const x = S.info[cc];
+    return `<tr><td>${flag(cc)} ${cc.toUpperCase()}</td><td>${x && x.rating ? "⭐ " + x.rating.toFixed(2) : "—"}</td><td>${x ? x.ratings ?? 0 : "—"}</td><td>${x ? esc(x.version) : "—"}</td></tr>`;
+  }).join("");
+}
+
+function renderStats() {
+  const ranked = KW.filter(k => k.rank), top10 = ranked.filter(k => k.rank <= 10), top3 = ranked.filter(k => k.rank <= 3);
+  const ups = KW.filter(k => k.rank && k.prev && k.rank < k.prev).length, downs = KW.filter(k => (k.prev && (!k.rank || k.rank > k.prev))).length;
+  const auto = KW.filter(k => k.source === "auto").length;
+  const bestChart = S.charts.filter(c => c.rank).sort((a, b) => a.rank - b.rank)[0];
+  const st = [[KW.length, "Keywords kantba3o"], [ranked.length, "Ranké fihom"], [top3.length, "F top 3"], [top10.length, "F top 10"],
+    [`<span class="up">${ups}</span> / <span class="down">${downs}</span>`, "Tl3o / hbto lyoum"], [auto, "Tl9aw automatiquement"],
+    [bestChart ? `#${bestChart.rank}` : "—", bestChart ? `Top chart: ${S.genre_names[bestChart.genre] || bestChart.genre} ${bestChart.country.toUpperCase()}` : "Top charts: machi f top 100"]];
+  $("#stats").innerHTML = st.map(([v, l]) => `<div class="stat"><div class="v">${v}</div><div class="l">${l}</div></div>`).join("");
+}
+
+let kwSort = {key: "rank", dir: 1};
+function renderKeywords() {
+  const c = $("#kwCountry").value, src = $("#kwSource").value, rk = $("#kwRanked").value, q = $("#kwSearch").value.toLowerCase();
+  let rows = KW.filter(k => (!c || k.country === c) && (!src || k.source === src) && (rk === "" || !!k.rank === (rk === "1")) && (!q || k.term.includes(q)));
+  const val = k => kwSort.key === "rank" ? (k.rank || 9999) : kwSort.key === "best" ? (k.best || 9999) : kwSort.key === "change" ? -((k.prev || 999) - (k.rank || 999)) : k[kwSort.key];
+  rows.sort((a, b) => (val(a) > val(b) ? 1 : val(a) < val(b) ? -1 : 0) * kwSort.dir);
+  const th = (k, l) => `<th data-sort="${k}">${l}${kwSort.key === k ? (kwSort.dir > 0 ? " ↑" : " ↓") : ""}</th>`;
+  $("#kwTable").innerHTML = `<tr>${th("term", "Keyword")}${th("country", "Bled")}${th("rank", "Rank lyoum")}${th("change", "Tbdil")}${th("best", "A7san rank")}<th>30 yom</th>${th("source", "Source")}<th></th></tr>` +
+    (rows.length ? rows.map(k => `<tr class="click" data-id="${k.id}"><td>${esc(k.term)}</td><td>${flag(k.country)} ${k.country.toUpperCase()}</td><td>${rankCell(k)}</td><td>${delta(k)}</td><td>${k.best ? "#" + k.best : "—"}</td><td>${spark(k.history)}</td><td><span class="badge ${k.source}">${k.source === "auto" ? "auto" : "nta"}</span></td><td><button class="small" data-del="${k.id}">7ayed</button></td></tr>`).join("")
+      : `<tr><td colspan="8" class="muted">Ma kayn ta keyword. Zid keywords lfo9 wla brek 3la "Check + Discovery".</td></tr>`);
+}
+
+async function showSerp(id) {
+  const k = KW.find(x => x.id == id), d = await api("/api/serp?id=" + id);
+  const me = S.config.app_id;
+  $("#serpCard").classList.remove("hidden");
+  $("#serpTitle").innerHTML = `Top 10 f "${esc(k.term)}" ${flag(k.country)} <span class="muted">(${d.date || "—"})</span>`;
+  $("#serpTable").innerHTML = `<tr><th>#</th><th>App</th><th>Ratings</th></tr>` + d.apps.map(a => `<tr class="${a.app_id === me ? "me" : ""}"><td>${a.pos}</td><td><a href="https://apps.apple.com/${k.country}/app/id${a.app_id}" target="_blank">${esc(a.name || a.app_id)}</a></td><td>${a.ratings ?? "—"}</td></tr>`).join("");
+  $("#serpCard").scrollIntoView({behavior: "smooth"});
+}
+
+function renderCandidates() {
+  const c = $("#cdCountry").value, r = $("#cdRanked").value;
+  const rows = CD.filter(x => (!c || x.country === c) && (r === "" || !!x.rank === (r === "1")));
+  $("#cdTable").innerHTML = `<tr><th>Keyword</th><th>Bled</th><th>Natija</th><th>Mnin jat</th><th>Ttesta f</th></tr>` +
+    (rows.length ? rows.map(x => `<tr><td>${esc(x.term)}</td><td>${flag(x.country)} ${x.country.toUpperCase()}</td><td>${x.rank ? `<span class="rank up">✅ #${x.rank}</span>` : `<span class="muted">machi ranké</span>`}</td><td class="muted">${esc(x.origin)}</td><td class="muted">${x.tested_at}</td></tr>`).join("")
+      : `<tr><td colspan="5" class="muted">Mazal ma ttesta 7ta keyword. Brek 3la "Check + Discovery".</td></tr>`);
+}
+
+async function renderAnalysis() {
+  const c = $("#anCountry").value; if (!c) return;
+  const d = await api("/api/analysis?country=" + c);
+  const ck = b => b ? `<span class="yes">✔</span>` : `<span class="no">✗</span>`;
+  $("#anTable").innerHTML = `<tr><th>Kalma</th><th>Ch7al mn concurrent</th><th>F smiya/subtitle dyalk</th><th>F keywords dyalk</th><th>F description</th><th>Rank dyalk</th><th>Nasi7a</th></tr>` +
+    (d.words.length ? d.words.map(w => {
+      const tip = w.trademark ? `<span class="down">⚠️ marque, ma tzidhach</span>` : w.in_title ? `<span class="muted">mzyan</span>` : w.in_keywords ? `<span class="muted">kayna f keywords</span>` : `<b class="up">zidha</b>`;
+      return `<tr><td><b>${esc(w.word)}</b></td><td>${w.count}</td><td>${ck(w.in_title)}</td><td>${ck(w.in_keywords)}</td><td>${ck(w.in_description)}</td><td>${w.rank ? "#" + w.rank : "—"}</td><td>${tip}</td></tr>`;
+    }).join("") : `<tr><td colspan="7" class="muted">Mazal ma kayn data. Zid keywords o dir check.</td></tr>`);
+}
+
+function renderCharts() {
+  const latest = {};
+  S.charts.forEach(c => { latest[c.country + "|" + c.genre] = c; });
+  const best = {};
+  S.charts.forEach(c => { const k = c.country + "|" + c.genre; if (c.rank && (!best[k] || c.rank < best[k])) best[k] = c.rank; });
+  const rows = Object.values(latest).sort((a, b) => a.country.localeCompare(b.country) || a.genre.localeCompare(b.genre));
+  $("#chTable").innerHTML = `<tr><th>Bled</th><th>Category</th><th>Rank lyoum</th><th>A7san rank</th><th>Date</th></tr>` +
+    (rows.length ? rows.map(c => `<tr><td>${flag(c.country)} ${c.country.toUpperCase()}</td><td>${esc(S.genre_names[c.genre] || c.genre)}</td><td>${c.rank ? `<span class="rank">#${c.rank}</span>` : `<span class="muted">machi f top 100</span>`}</td><td>${best[c.country + "|" + c.genre] ? "#" + best[c.country + "|" + c.genre] : "—"}</td><td class="muted">${c.date}</td></tr>`).join("")
+      : `<tr><td colspan="5" class="muted">Mazal ma kayn data.</td></tr>`);
+}
+
+function renderStatus(st) {
+  $("#statusCard").classList.toggle("hidden", !LOCAL || (!st.running && !st.log.length));
+  $("#stStep").textContent = st.error ? "Error: " + st.error : st.step;
+  $("#stCount").textContent = st.total ? `${st.done} / ${st.total}` : "";
+  $("#stBar").style.width = st.total ? Math.min(100, st.done / st.total * 100) + "%" : "0";
+  $("#stLog").textContent = st.log.slice().reverse().join("\n");
+  $("#runQuick").disabled = $("#runFull").disabled = st.running;
+}
+
+async function loadAll() {
+  await loadState();
+  [KW, CD] = await Promise.all([api("/api/keywords"), api("/api/candidates")]);
+  renderStats(); renderKeywords(); renderCandidates();
+  if (tab === "analysis") renderAnalysis();
+}
+
+let polling = false;
+async function poll() {
+  if (polling) return; polling = true;
+  while (true) {
+    const s = await api("/api/state");
+    renderStatus(s.status);
+    if (!s.status.running) break;
+    await new Promise(r => setTimeout(r, 1500));
+  }
+  polling = false; loadAll();
+}
+
+$("#tabs").onclick = e => {
+  const t = e.target.dataset.tab; if (!t) return;
+  tab = t;
+  document.querySelectorAll("#tabs button").forEach(b => b.classList.toggle("on", b.dataset.tab === t));
+  document.querySelectorAll("section").forEach(s => s.classList.toggle("hidden", s.id !== "tab-" + t));
+  if (t === "analysis") renderAnalysis();
+};
+// kol action: ila w9e3 error (token, GitHub...) kayban f flash
+const act = fn => async e => { try { await fn(e); } catch (err) { flash(esc(err.message), true); } };
+const run = discover => act(async () => {
+  const r = await api("/api/run", {discover});
+  if (r.github) flash(GH_WAIT); else poll();
+});
+$("#runQuick").onclick = run(false);
+$("#runFull").onclick = run(true);
+$("#infoCountry").onchange = renderInfo;
+["#kwCountry", "#kwSource", "#kwRanked"].forEach(s => $(s).onchange = renderKeywords);
+$("#kwSearch").oninput = renderKeywords;
+["#cdCountry", "#cdRanked"].forEach(s => $(s).onchange = renderCandidates);
+$("#anCountry").onchange = renderAnalysis;
+$("#kwTable").onclick = act(async e => {
+  const del = e.target.dataset.del;
+  if (del) {
+    e.stopPropagation();
+    if (!confirm("Bghiti t7ayed had keyword?")) return;
+    const r = await api("/api/keywords/delete", {ids: [+del]});
+    if (r.github) { KW = KW.filter(k => k.id !== +del); renderKeywords(); renderStats(); flash("T7ayed mn config f GitHub ✔. " + GH_WAIT); }
+    else loadAll();
+    return;
+  }
+  const s = e.target.closest("th")?.dataset.sort;
+  if (s) { kwSort = {key: s, dir: kwSort.key === s ? -kwSort.dir : 1}; renderKeywords(); return; }
+  const tr = e.target.closest("tr[data-id]"); if (tr) showSerp(tr.dataset.id);
+});
+$("#addBtn").onclick = act(async () => {
+  const countries = [...document.querySelectorAll("#addCountries input:checked")].map(i => i.value);
+  if (!$("#newTerms").value.trim() || !countries.length) return;
+  const r = await api("/api/keywords", {terms: $("#newTerms").value, countries});
+  $("#newTerms").value = "";
+  if (r.github) { $("#addMsg").textContent = `Tzadou ${r.added} f config ✔`; flash(GH_WAIT); }
+  else { $("#addMsg").textContent = `Tzadou ${r.added}. Brek 3la "Check ranks daba" bach tchouf rank dyalhom.`; loadAll(); }
+});
+$("#saveCfg").onclick = act(async () => {
+  const r = await api("/api/config", {app_id: $("#cfgApp").value.trim(), daily_hour: $("#cfgHour").value, candidates_per_run: $("#cfgCand").value, countries: $("#cfgCountries").value, my_keywords: $("#cfgKw").value});
+  $("#cfgMsg").textContent = "Tsjjel ✔";
+  if (r.github) flash("Settings tsjjlo f GitHub ✔. " + GH_WAIT); else loadAll();
+});
+$("#ghSave").onclick = () => {
+  store.set("aso_repo", $("#ghRepo").value.trim()); store.set("aso_token", $("#ghToken").value.trim());
+  $("#ghMsg").textContent = GH.token() ? "Tsjjel f had browser ✔" : "Token t7ayed";
+  ghRunStatus();
+};
+if (!LOCAL) {
+  $("#ghCard").classList.remove("hidden");
+  $("#cfgHourWrap").classList.add("hidden");
+  $("#ghRepo").value = GH.repo(); $("#ghToken").value = GH.token();
+  $("#ghRepoName").textContent = GH.repo().split("/")[1];
+  $("#ghActions").href = actionsUrl();
+}
+
+loadAll().then(() => { if (LOCAL && S.status.running) poll(); ghRunStatus(); });
+</script>
+</body>
+</html>
