@@ -93,6 +93,13 @@ tr.busy td { background: var(--accent-soft); }
 .chip.tracked { background: var(--accent-soft); color: var(--accent); border-color: transparent; }
 .chip.tested { color: var(--muted); border-style: dashed; }
 td.wrap { white-space: normal; min-width: 280px; }
+.pager { display: flex; flex-wrap: wrap; gap: 10px 16px; align-items: center; justify-content: space-between; margin-top: 12px; }
+.pager .pages { display: flex; flex-wrap: wrap; gap: 4px; }
+.pager .pages button { min-width: 34px; padding: 5px 9px; font-variant-numeric: tabular-nums; }
+.pager .pages button.on { background: var(--accent); border-color: var(--accent); color: #fff; font-weight: 600; }
+.pager .pages span { padding: 5px 4px; color: var(--muted); }
+.pager .size { display: flex; align-items: center; gap: 8px; color: var(--muted); font-size: 13px; }
+.pager .size select { width: auto; padding: 5px 8px; }
 .legend { display: flex; flex-wrap: wrap; gap: 4px 12px; align-items: center; margin-bottom: 10px; font-size: 12px; color: var(--muted); }
 .up { color: var(--good); } .down { color: var(--bad); } .muted { color: var(--muted); }
 .yes { color: var(--good); } .no { color: var(--muted); }
@@ -250,6 +257,7 @@ code { font: 12px ui-monospace, Menlo, Consolas, monospace; direction: ltr; unic
       </div>
       <div class="muted" style="font-size:12px;margin-bottom:8px" data-i18n="estNote"></div>
       <div class="tablewrap"><table id="kwTable"></table></div>
+      <div class="pager" id="kwPager" data-pager="kw"></div>
     </div>
     <div class="card hidden" id="serpCard">
       <h2 id="serpTitle"></h2>
@@ -270,6 +278,7 @@ code { font: 12px ui-monospace, Menlo, Consolas, monospace; direction: ltr; unic
           <option value="" data-i18n="all"></option><option value="1" data-i18n="rankedOk"></option><option value="0" data-i18n="notRanking"></option></select></div>
       </div>
       <div class="tablewrap"><table id="cdTable"></table></div>
+      <div class="pager" id="cdPager" data-pager="cd"></div>
     </div>
   </section>
 
@@ -379,6 +388,7 @@ const I18N = {
     vHigh: "High", vMedium: "Medium", vLow: "Low", vNone: "None", vTarget: "Target",
     estNote: "Popularity, difficulty and value are estimates built from the top 10 apps for each keyword and their ratings, because Apple does not publish search volumes. Value combines popularity with your position: <b>High</b> means the keyword likely brings you installs, <b>Target</b> means you don't rank yet but it looks popular and beatable.",
     bringInstalls: "Bring installs (est.)", targets: "Targets",
+    perPage: "Per page", showing: "{a}–{b} of {n}", prevPage: "Previous page", nextPage: "Next page",
     tabCompetitors: "Competitors", compTitle: "Your main competitors",
     compHelp: "Games in your category that appear most often in the top 10 of your keywords. Their keywords come from their name and description, because the App Store Connect keyword field is private. Every day the tracker tests your game on these keywords and adds the ones where it ranks.",
     appearsIn: "In your keywords", avgPos: "Avg. position", theirKw: "Their keywords",
@@ -453,6 +463,7 @@ const I18N = {
     vHigh: "مرتفعة", vMedium: "متوسطة", vLow: "منخفضة", vNone: "لا شيء", vTarget: "فرصة",
     estNote: "الشعبية والصعوبة والقيمة تقديرات مبنية على أفضل 10 تطبيقات لكل كلمة مفتاحية وعدد تقييماتها، لأن Apple لا تنشر أحجام البحث. تجمع القيمة بين الشعبية وترتيبك: <b>مرتفعة</b> تعني أن الكلمة تجلب لك تثبيتات على الأرجح، و<b>فرصة</b> تعني أنك لا تظهر فيها بعد لكنها تبدو شائعة ويمكن المنافسة عليها.",
     bringInstalls: "تجلب تثبيتات (تقديريًا)", targets: "فرص",
+    perPage: "لكل صفحة", showing: "{a}–{b} من {n}", prevPage: "الصفحة السابقة", nextPage: "الصفحة التالية",
     tabCompetitors: "المنافسون", compTitle: "أبرز منافسيك",
     compHelp: "ألعاب من فئتك تظهر أكثر من غيرها في أفضل 10 نتائج لكلماتك المفتاحية. كلماتها المفتاحية مستخرجة من اسمها ووصفها، لأن حقل الكلمات المفتاحية في App Store Connect خاص. يختبر المتتبّع لعبتك يوميًا على هذه الكلمات ويضيف التي تظهر فيها.",
     appearsIn: "في كلماتك المفتاحية", avgPos: "متوسط الترتيب", theirKw: "كلماتهم المفتاحية",
@@ -788,6 +799,50 @@ function renderStats() {
   $("#stats").innerHTML = st.map(([v, l]) => `<div class="stat"><div class="v">${v}</div><div class="l">${l}</div></div>`).join("");
 }
 
+// pagination: size (25/50/100/500/kolchi) katb9a mtfakra f had browser
+const PAGE_SIZES = [25, 50, 100, 500, 0];
+const PAGERS = {
+  kw: {page: 1, size: +store.get("aso_size_kw") || 50, render: () => renderKeywords()},
+  cd: {page: 1, size: +store.get("aso_size_cd") || 50, render: () => renderCandidates()},
+};
+if (store.get("aso_size_kw") === "0") PAGERS.kw.size = 0;
+if (store.get("aso_size_cd") === "0") PAGERS.cd.size = 0;
+function pageSlice(id, rows) {
+  const P = PAGERS[id], pages = P.size ? Math.max(1, Math.ceil(rows.length / P.size)) : 1;
+  P.page = Math.min(Math.max(1, P.page), pages);
+  P.pages = pages; P.total = rows.length;
+  return P.size ? rows.slice((P.page - 1) * P.size, P.page * P.size) : rows;
+}
+function renderPager(id) {
+  const P = PAGERS[id], el = $("#" + id + "Pager");
+  if (!P.total) { el.innerHTML = ""; return; }
+  const a = P.size ? (P.page - 1) * P.size + 1 : 1, b = P.size ? Math.min(P.total, P.page * P.size) : P.total;
+  // 1 … p-1 p p+1 … akhir page
+  const nums = [...new Set([1, P.page - 1, P.page, P.page + 1, P.pages])].filter(n => n >= 1 && n <= P.pages).sort((x, y) => x - y);
+  let pages = `<button data-page="${P.page - 1}" ${P.page === 1 ? "disabled" : ""} aria-label="${t("prevPage")}">${LANG === "ar" ? "›" : "‹"}</button>`;
+  nums.forEach((n, i) => {
+    if (i && n - nums[i - 1] > 1) pages += `<span>…</span>`;
+    pages += `<button data-page="${n}" class="${n === P.page ? "on" : ""}" ${n === P.page ? 'aria-current="page"' : ""}>${n}</button>`;
+  });
+  pages += `<button data-page="${P.page + 1}" ${P.page === P.pages ? "disabled" : ""} aria-label="${t("nextPage")}">${LANG === "ar" ? "‹" : "›"}</button>`;
+  el.innerHTML = `<div class="size"><span>${t("showing", {a: num(a), b: num(b), n: num(P.total)})}</span>
+    <label style="margin:0;display:flex;align-items:center;gap:6px">${t("perPage")}
+    <select data-size>${PAGE_SIZES.map(n => `<option value="${n}" ${n === P.size ? "selected" : ""}>${n ? n : t("all")}</option>`).join("")}</select></label></div>
+    <div class="pages">${P.pages > 1 ? pages : ""}</div>`;
+}
+document.addEventListener("click", e => {
+  const btn = e.target.closest(".pager button[data-page]");
+  if (!btn || btn.disabled) return;
+  const P = PAGERS[btn.closest(".pager").dataset.pager], card = btn.closest(".card");
+  P.page = +btn.dataset.page; P.render();
+  card.scrollIntoView({behavior: "smooth", block: "start"});
+});
+document.addEventListener("change", e => {
+  if (!e.target.matches(".pager select[data-size]")) return;
+  const id = e.target.closest(".pager").dataset.pager, P = PAGERS[id];
+  P.size = +e.target.value; P.page = 1; store.set("aso_size_" + id, String(P.size)); P.render();
+});
+
 let kwSort = {key: "rank", dir: 1};
 function renderKeywords() {
   const c = $("#kwCountry").value, src = $("#kwSource").value, rk = $("#kwRanked").value, q = $("#kwSearch").value.toLowerCase();
@@ -796,10 +851,11 @@ function renderKeywords() {
   const val = k => kwSort.key === "rank" ? (k.rank || 9999) : kwSort.key === "best" ? (k.best || 9999) : kwSort.key === "change" ? -((k.prev || 999) - (k.rank || 999))
     : kwSort.key === "pop" || kwSort.key === "diff" ? -(k[kwSort.key] ?? -1) : kwSort.key === "value" ? -((VALUE_ORDER[k.value_label] || 0) * 1000 + (k.value || 0)) : k[kwSort.key];
   rows.sort((a, b) => (val(a) > val(b) ? 1 : val(a) < val(b) ? -1 : 0) * kwSort.dir);
+  const shown = pageSlice("kw", rows);
   const th = (k, l) => `<th data-sort="${k}">${l}${kwSort.key === k ? (kwSort.dir > 0 ? " ↑" : " ↓") : ""}</th>`;
   const busy = id => refreshing.has(id) || refreshQueue.has(id);
   $("#kwTable").innerHTML = `<tr>${th("term", t("keyword"))}${th("country", t("country"))}${th("rank", t("rankToday"))}${th("change", t("change"))}${th("best", t("best"))}${th("pop", t("popularity"))}${th("diff", t("difficulty"))}${th("value", t("valueCol"))}<th>${t("last30")}</th>${th("source", t("source"))}<th>${t("actions")}</th></tr>` +
-    (rows.length ? rows.map(k => `<tr class="click${busy(k.id) ? " busy" : ""}" data-id="${k.id}">
+    (shown.length ? shown.map(k => `<tr class="click${busy(k.id) ? " busy" : ""}" data-id="${k.id}">
       <td dir="auto">${esc(k.term)}</td><td>${flag(k.country)} ${k.country.toUpperCase()}</td><td>${rankCell(k)}</td><td>${delta(k)}</td>
       <td>${k.best ? "#" + k.best : "—"}</td><td>${meter(k.pop)}</td><td>${meter(k.diff, "diff")}</td><td>${valueBadge(k)}</td><td>${spark(k.history)}</td>
       <td><span class="badge ${k.source}">${k.source === "auto" ? t("badgeAuto") : t("badgeYou")}</span></td>
@@ -809,6 +865,7 @@ function renderKeywords() {
         <button class="icon-btn danger" data-del="${k.id}" title="${t("del")}" aria-label="${t("del")}">${ICONS.trash}</button>
       </span></td></tr>`).join("")
       : `<tr><td colspan="11" class="muted">${t("emptyKw")}</td></tr>`);
+  renderPager("kw");
   $("#refreshAll").disabled = refreshBusy && !KW.some(k => !busy(k.id));
   $("#refreshAll").classList.toggle("spin", refreshBusy);
 }
@@ -825,9 +882,11 @@ async function showSerp(id) {
 function renderCandidates() {
   const c = $("#cdCountry").value, r = $("#cdRanked").value;
   const rows = CD.filter(x => (!c || x.country === c) && (r === "" || !!x.rank === (r === "1")));
+  const shown = pageSlice("cd", rows);
   $("#cdTable").innerHTML = `<tr><th>${t("keyword")}</th><th>${t("country")}</th><th>${t("result")}</th><th>${t("origin")}</th><th>${t("tested")}</th></tr>` +
-    (rows.length ? rows.map(x => `<tr><td dir="auto">${esc(x.term)}</td><td>${flag(x.country)} ${x.country.toUpperCase()}</td><td>${x.rank ? `<span class="rank up">✅ #${x.rank}</span>` : `<span class="muted">${t("notRanking")}</span>`}</td><td class="muted">${esc(originLabel(x.origin))}</td><td class="muted">${fmtDate(x.tested_at)}</td></tr>`).join("")
+    (shown.length ? shown.map(x => `<tr><td dir="auto">${esc(x.term)}</td><td>${flag(x.country)} ${x.country.toUpperCase()}</td><td>${x.rank ? `<span class="rank up">✅ #${x.rank}</span>` : `<span class="muted">${t("notRanking")}</span>`}</td><td class="muted">${esc(originLabel(x.origin))}</td><td class="muted">${fmtDate(x.tested_at)}</td></tr>`).join("")
       : `<tr><td colspan="5" class="muted">${t("emptyCd")}</td></tr>`);
+  renderPager("cd");
 }
 
 function renderCompetitors() {
@@ -1049,9 +1108,10 @@ $("#runFull").onclick = act(async () => {
 });
 $("#refreshAll").onclick = () => refreshKeywords(KW.map(k => k.id));
 $("#infoCountry").onchange = renderInfo;
-["#kwCountry", "#kwSource", "#kwRanked"].forEach(s => $(s).onchange = renderKeywords);
-$("#kwSearch").oninput = renderKeywords;
-["#cdCountry", "#cdRanked"].forEach(s => $(s).onchange = renderCandidates);
+const kwFirst = () => { PAGERS.kw.page = 1; renderKeywords(); }, cdFirst = () => { PAGERS.cd.page = 1; renderCandidates(); };
+["#kwCountry", "#kwSource", "#kwRanked"].forEach(s => $(s).onchange = kwFirst);
+$("#kwSearch").oninput = kwFirst;
+["#cdCountry", "#cdRanked"].forEach(s => $(s).onchange = cdFirst);
 $("#anCountry").onchange = renderAnalysis;
 $("#coCountry").onchange = renderCompetitors;
 $("#kwTable").onclick = act(async e => {
@@ -1068,7 +1128,7 @@ $("#kwTable").onclick = act(async e => {
     return;
   }
   const s = e.target.closest("th")?.dataset.sort;
-  if (s) { kwSort = {key: s, dir: kwSort.key === s ? -kwSort.dir : 1}; renderKeywords(); return; }
+  if (s) { kwSort = {key: s, dir: kwSort.key === s ? -kwSort.dir : 1}; kwFirst(); return; }
   const tr = e.target.closest("tr[data-id]"); if (tr) showSerp(tr.dataset.id);
 });
 $("#addBtn").onclick = act(async () => {
