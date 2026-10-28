@@ -321,20 +321,20 @@ def generate_candidates(country, cfg):
         scores[term] = max(scores[term], score)
 
     for k in my_kw:
-        add(k, 100, "keywords dyalk")
+        add(k, 100, "my_keywords")
     for w in own_words:
-        add(w, 60 + market_uni[w] * 5, "smiya/subtitle dyalk")
+        add(w, 60 + market_uni[w] * 5, "own_title")
     for p in phrases(title_text, 2):
-        add(p, 55 + market_bi[p] * 5, "smiya/subtitle dyalk")
+        add(p, 55 + market_bi[p] * 5, "own_title")
     for w, c in market_uni.most_common(60):
         if c >= 2:
-            add(w, 20 + c * 5 + (10 if w in own_words else 0), f"concurrents ({c}x)")
+            add(w, 20 + c * 5 + (10 if w in own_words else 0), f"competitors:{c}")
     for p, c in market_bi.most_common(40):
         if c >= 2:
-            add(p, 25 + c * 6, f"concurrents ({c}x)")
+            add(p, 25 + c * 6, f"competitors:{c}")
     for w, c in desc_words.most_common(25):
         if c >= 2:
-            add(w, 15 + c * 2, "description dyalk")
+            add(w, 15 + c * 2, "description")
     core = sorted((w for w in own_words if "." not in w), key=lambda w: -market_uni[w])[:6]
     for a in core:
         for b, c in market_uni.most_common(15):
@@ -342,7 +342,7 @@ def generate_candidates(country, cfg):
                 continue
             # kalma li kayna kter 3nd concurrents (b7al "basketball") kat ji lekher: "street basketball"
             first, last = (a, b) if market_uni[a] <= market_uni[b] else (b, a)
-            add(f"{first} {last}", 18 + min(c, 10) * 2, "combinaison")
+            add(f"{first} {last}", 18 + min(c, 10) * 2, "combo")
 
     with db() as con:
         tracked = {r["term"] for r in con.execute("SELECT term FROM keywords WHERE country=?", (country,))}
@@ -374,7 +374,9 @@ def save_serp(con, keyword_id, date, top_ids, names):
                     (keyword_id, date, pos, aid, r.get("trackName"), r.get("userRatingCount")))
 
 
-def run_job(discover=True, only_country=None):
+def run_job(discover=True, only_country=None, keyword_ids=None):
+    """Check kamel. Ila t3taw keyword_ids, kaychecki ghir had keywords (bla app info, charts o discovery).
+    STATUS["step"] = code ("info:US", "keyword:term|US"...) bach dashboard yterjmo."""
     if not _job_lock.acquire(blocking=False):
         return False
     try:
@@ -382,18 +384,22 @@ def run_job(discover=True, only_country=None):
         cfg = load_config()
         app_id = str(cfg["app_id"])
         countries = [only_country] if only_country else cfg["countries"]
+        keywords_only = keyword_ids is not None
         d = today()
 
         with db() as con:
-            kws = con.execute("SELECT * FROM keywords WHERE country IN (%s)" % ",".join("?" * len(countries)),
-                              countries).fetchall()
-        n_cand = cfg["candidates_per_run"] if discover else 0
-        STATUS["total"] = len(countries) * (2 + 3 + n_cand) + len(kws)
+            if keywords_only:
+                kws = [r for kid in keyword_ids for r in con.execute("SELECT * FROM keywords WHERE id=?", (kid,))]
+            else:
+                kws = con.execute("SELECT * FROM keywords WHERE country IN (%s)" % ",".join("?" * len(countries)),
+                                  countries).fetchall()
+        n_cand = cfg["candidates_per_run"] if discover and not keywords_only else 0
+        STATUS["total"] = len(kws) + (0 if keywords_only else len(countries) * (2 + 3 + n_cand))
 
         # 1. ma3lomat 3la app
         genres = ["6014"]
-        for cc in countries:
-            STATUS["step"] = f"Ma3lomat dyal app ({cc.upper()})"
+        for cc in [] if keywords_only else countries:
+            STATUS["step"] = f"info:{cc.upper()}"
             try:
                 r = lookup([app_id], cc).get(app_id)
                 if r:
@@ -415,14 +421,14 @@ def run_job(discover=True, only_country=None):
                     with db() as con:
                         con.execute("INSERT OR REPLACE INTO app_info VALUES (?,?,?)", (d, cc, json.dumps(info)))
                 else:
-                    log(f"{cc.upper()}: app ma kaynach f store dyal had l bled")
+                    log(f"{cc.upper()}: app not available in this store")
             except Exception as e:
-                log(f"{cc.upper()}: error f lookup: {e}")
+                log(f"{cc.upper()}: lookup failed: {e}")
             STATUS["done"] += 2
 
         # 2. top charts
-        for cc in countries:
-            STATUS["step"] = f"Top charts ({cc.upper()})"
+        for cc in [] if keywords_only else countries:
+            STATUS["step"] = f"charts:{cc.upper()}"
             for g in genres[:3]:
                 try:
                     ids = chart(cc, g)
@@ -435,7 +441,7 @@ def run_job(discover=True, only_country=None):
 
         # 3. keywords li kantba3o
         for k in kws:
-            STATUS["step"] = f"Keyword '{k['term']}' ({k['country'].upper()})"
+            STATUS["step"] = f"keyword:{k['term']}|{k['country'].upper()}"
             try:
                 rank, depth, method, top_ids, subs = check_rank(k["term"], k["country"], app_id)
                 names = lookup(top_ids[:10], k["country"]) if top_ids else {}
@@ -455,7 +461,7 @@ def run_job(discover=True, only_country=None):
                 break
             cands = generate_candidates(cc, cfg)[:n_cand]
             for term, origin in cands:
-                STATUS["step"] = f"Discovery: '{term}' ({cc.upper()})"
+                STATUS["step"] = f"discovery:{term}|{cc.upper()}"
                 try:
                     rank, depth, method, top_ids, subs = check_rank(term, cc, app_id)
                     with db() as con:
@@ -469,18 +475,19 @@ def run_job(discover=True, only_country=None):
                             con.execute("INSERT OR REPLACE INTO ranks VALUES (?,?,?,?,?)", (kid, d, rank, depth, method))
                             save_serp(con, kid, d, top_ids, names)
                         found += 1
-                        log(f"✅ Keyword jdid: '{term}' ({cc.upper()}) rank #{rank}")
+                        log(f"✅ New keyword: '{term}' ({cc.upper()}) rank #{rank}")
                 except Exception as e:
                     log(f"discovery '{term}' {cc}: {e}")
                 STATUS["done"] += 1
             STATUS["done"] += n_cand - len(cands)
 
-        if not only_country:
+        if not only_country and not keywords_only:
             meta_set("last_run", d)
-        meta_set("last_run_at", datetime.datetime.now().isoformat(timespec="minutes"))
+            meta_set("last_run_at", datetime.datetime.now().isoformat(timespec="minutes"))
+        meta_set("last_refresh_at", datetime.datetime.now().isoformat(timespec="minutes"))
         meta_set("api_mode", "blocked" if _api_blocked else "ok")
-        log(f"Salina. {len(kws)} keyword t3awed tchekaw, {found} keyword jdid tl9aw.")
-        STATUS["step"] = "Salina"
+        log(f"Done. {len(kws)} keywords checked, {found} new keywords found.")
+        STATUS["step"] = "done"
     except Exception as e:
         STATUS["error"] = str(e)
         traceback.print_exc()
@@ -511,7 +518,8 @@ def api_state():
         charts = [dict(r) for r in con.execute("SELECT * FROM charts ORDER BY date")]
     return {
         "config": cfg, "info": info, "charts": charts, "genre_names": GENRE_NAMES,
-        "status": STATUS, "last_run_at": meta_get("last_run_at"), "api_mode": meta_get("api_mode"),
+        "status": STATUS, "last_run_at": meta_get("last_run_at"), "last_refresh_at": meta_get("last_refresh_at"),
+        "api_mode": meta_get("api_mode"),
     }
 
 
@@ -523,7 +531,7 @@ def api_keywords():
             ranks.setdefault(r["keyword_id"], []).append({"date": r["date"], "rank": r["rank"], "depth": r["depth"], "method": r["method"]})
     for k in kws:
         h = ranks.get(k["id"], [])
-        k["history"] = h[-60:]
+        k["history"] = h[-90:]
         k["rank"] = h[-1]["rank"] if h else None
         k["depth"] = h[-1]["depth"] if h else None
         k["checked"] = h[-1]["date"] if h else None
@@ -622,6 +630,15 @@ class Handler(BaseHTTPRequestHandler):
             save_config(cfg)
             sync_config_keywords(cfg)
             return self.send({"ok": True})
+        if u.path == "/api/refresh":
+            if STATUS["running"]:
+                return self.send({"ok": False, "busy": True})
+            ids = b.get("ids")
+            if ids is None:
+                with db() as con:
+                    ids = [r["id"] for r in con.execute("SELECT id FROM keywords")]
+            threading.Thread(target=run_job, kwargs={"keyword_ids": [int(i) for i in ids]}, daemon=True).start()
+            return self.send({"ok": True})
         if u.path == "/api/run":
             if STATUS["running"]:
                 return self.send({"ok": False, "msg": "deja khdam"})
@@ -695,6 +712,7 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--run", action="store_true", help="dir check wa7d o khrej (l GitHub Actions)")
     ap.add_argument("--no-discover", action="store_true", help="bla discovery dyal keywords jdad")
+    ap.add_argument("--keywords", help='ghir had keywords: "all" wla "term|us;term2|fr"')
     args = ap.parse_args()
     if not os.path.exists(CONFIG_PATH):
         save_config(DEFAULT_CONFIG)
@@ -702,7 +720,13 @@ def main():
     cfg = load_config()
     sync_config_keywords(cfg)
     if args.run:
-        run_job(discover=not args.no_discover)
+        keyword_ids = None
+        if args.keywords:
+            with db() as con:
+                rows = con.execute("SELECT id, term, country FROM keywords").fetchall()
+            wanted = {w.strip().lower() for w in args.keywords.split(";") if w.strip()}
+            keyword_ids = [r["id"] for r in rows if "all" in wanted or f"{r['term']}|{r['country']}" in wanted]
+        run_job(discover=not args.no_discover, keyword_ids=keyword_ids)
         export_static()
         if STATUS["error"]:
             raise SystemExit("Error: " + STATUS["error"])

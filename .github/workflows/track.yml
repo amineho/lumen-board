@@ -9,6 +9,10 @@ on:
         description: "Discovery dyal keywords jdad"
         type: boolean
         default: true
+      keywords:
+        description: 'Ghir had keywords: "all" wla "term|us;term|fr" (khawi = check kamel)'
+        type: string
+        default: ""
   push:
     branches: [main]
     paths: [config.json]  # mli tbdel config mn dashboard, check kaybda wa7do
@@ -17,7 +21,7 @@ permissions:
   contents: write
 
 concurrency:
-  group: aso-tracker
+  group: build
   cancel-in-progress: false
 
 jobs:
@@ -32,7 +36,15 @@ jobs:
           python-version: "3.12"
 
       - name: Check ranks
-        run: python tracker.py --run ${{ (github.event_name == 'push' || github.event.inputs.discover == 'false') && '--no-discover' || '' }}
+        env:
+          EVENT: ${{ github.event_name }}
+          DISCOVER: ${{ github.event.inputs.discover }}
+          KEYWORDS: ${{ github.event.inputs.keywords }}
+        run: |
+          set -- --run
+          if [ "$EVENT" = "push" ] || [ "$DISCOVER" = "false" ]; then set -- "$@" --no-discover; fi
+          if [ -n "$KEYWORDS" ]; then set -- "$@" --keywords "$KEYWORDS"; fi
+          python tracker.py "$@"
 
       - name: Sjjel data
         run: |

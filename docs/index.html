@@ -1,56 +1,80 @@
 <!doctype html>
-<html lang="en">
+<html lang="en" dir="ltr">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>ASO Tracker</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;600&display=swap">
 <style>
 :root {
-  --bg: #f6f7f9; --card: #ffffff; --text: #16181d; --muted: #667085; --line: #e4e7ec;
+  --bg: #f6f7f9; --card: #ffffff; --text: #16181d; --muted: #667085; --line: #e4e7ec; --grid: #eef0f3;
   --accent: #2f6fed; --accent-soft: #e8f0fe; --good: #138a4b; --good-soft: #e6f6ed;
   --bad: #c4321c; --bad-soft: #fdecea; --warn: #9a6700; --warn-soft: #fff4d6;
+  --shadow: 0 20px 60px rgba(16, 24, 40, .18);
 }
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
-    --bg: #0f1115; --card: #171a21; --text: #e7e9ee; --muted: #98a2b3; --line: #2a2f3a;
+    --bg: #0f1115; --card: #171a21; --text: #e7e9ee; --muted: #98a2b3; --line: #2a2f3a; --grid: #222733;
     --accent: #6b9cff; --accent-soft: #1c2a47; --good: #4ade80; --good-soft: #143322;
     --bad: #ff7b6b; --bad-soft: #3a1d1a; --warn: #f5c451; --warn-soft: #3a2f12;
+    --shadow: 0 20px 60px rgba(0, 0, 0, .5);
     color-scheme: dark;
   }
 }
 :root[data-theme="dark"] {
-  --bg: #0f1115; --card: #171a21; --text: #e7e9ee; --muted: #98a2b3; --line: #2a2f3a;
+  --bg: #0f1115; --card: #171a21; --text: #e7e9ee; --muted: #98a2b3; --line: #2a2f3a; --grid: #222733;
   --accent: #6b9cff; --accent-soft: #1c2a47; --good: #4ade80; --good-soft: #143322;
   --bad: #ff7b6b; --bad-soft: #3a1d1a; --warn: #f5c451; --warn-soft: #3a2f12;
+  --shadow: 0 20px 60px rgba(0, 0, 0, .5);
   color-scheme: dark;
 }
 * { box-sizing: border-box; }
 body { margin: 0; background: var(--bg); color: var(--text); font: 14px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+:lang(ar) body, :lang(ar) button, :lang(ar) input, :lang(ar) textarea, :lang(ar) select { font-family: "IBM Plex Sans Arabic", "Segoe UI", Tahoma, sans-serif; }
 .wrap { max-width: 1180px; margin: 0 auto; padding-block: 20px 60px; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
 header { display: flex; gap: 14px; align-items: center; flex-wrap: wrap; }
 header img { width: 64px; height: 64px; border-radius: 14px; border: 1px solid var(--line); }
 header h1 { margin: 0; font-size: 20px; }
 header .sub { color: var(--muted); }
-header .actions { margin-left: auto; display: flex; gap: 8px; flex-wrap: wrap; }
+header .actions { margin-inline-start: auto; display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
 button { font: inherit; border: 1px solid var(--line); background: var(--card); color: var(--text); padding: 7px 14px; border-radius: 8px; cursor: pointer; }
+button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 button.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
 button:disabled { opacity: .5; cursor: default; }
 button.small { padding: 3px 9px; font-size: 12px; }
+.seg { display: inline-flex; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; }
+.seg button { border: 0; border-radius: 0; padding: 6px 12px; background: var(--card); color: var(--muted); }
+.seg button.on { background: var(--accent-soft); color: var(--accent); font-weight: 600; }
+.icon-btn { display: inline-grid; place-items: center; width: 30px; height: 30px; padding: 0; border-radius: 8px; color: var(--muted); }
+.icon-btn:hover:not(:disabled) { color: var(--accent); border-color: var(--accent); }
+.icon-btn.danger:hover:not(:disabled) { color: var(--bad); border-color: var(--bad); }
+.icon-btn svg { width: 16px; height: 16px; }
+.icon-btn.spin svg, .with-icon.spin svg { animation: spin 1s linear infinite; }
+.with-icon { display: inline-flex; align-items: center; gap: 8px; }
+.with-icon svg { width: 16px; height: 16px; }
+@keyframes spin { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .icon-btn.spin svg, .with-icon.spin svg { animation: none; } }
+.row-actions { display: inline-flex; gap: 6px; }
 nav { display: flex; gap: 4px; margin: 20px 0 16px; border-bottom: 1px solid var(--line); overflow-x: auto; }
 nav button { border: 0; background: none; border-bottom: 2px solid transparent; border-radius: 0; padding: 9px 14px; color: var(--muted); white-space: nowrap; }
 nav button.on { color: var(--text); border-bottom-color: var(--accent); font-weight: 600; }
 .card { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 16px; margin-bottom: 16px; }
 .card h2 { margin: 0 0 12px; font-size: 15px; }
+.card-head { display: flex; gap: 12px; align-items: center; justify-content: space-between; flex-wrap: wrap; margin-bottom: 12px; }
+.card-head h2 { margin: 0; }
 .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 12px; margin-bottom: 16px; }
 .stat { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 14px; }
-.stat .v { font-size: 24px; font-weight: 650; }
+.stat .v { font-size: 24px; font-weight: 650; font-variant-numeric: tabular-nums; }
 .stat .l { color: var(--muted); font-size: 12px; }
 .tablewrap { overflow-x: auto; }
 table { width: 100%; border-collapse: collapse; }
-th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--line); white-space: nowrap; }
-th { color: var(--muted); font-weight: 500; font-size: 12px; cursor: pointer; user-select: none; }
+th, td { text-align: start; padding: 8px 10px; border-bottom: 1px solid var(--line); white-space: nowrap; }
+th { color: var(--muted); font-weight: 500; font-size: 12px; user-select: none; }
+th[data-sort] { cursor: pointer; }
 tr.click { cursor: pointer; }
 tr.click:hover td { background: var(--accent-soft); }
+tr.busy td { background: var(--accent-soft); }
 .badge { display: inline-block; padding: 1px 8px; border-radius: 99px; font-size: 12px; background: var(--accent-soft); color: var(--accent); }
 .badge.auto { background: var(--good-soft); color: var(--good); }
 .rank { font-weight: 650; font-variant-numeric: tabular-nums; }
@@ -66,15 +90,35 @@ label { display: block; font-size: 12px; color: var(--muted); margin: 10px 0 4px
 .chips input { width: auto; }
 .progress { height: 6px; background: var(--line); border-radius: 9px; overflow: hidden; margin: 8px 0; }
 .progress div { height: 100%; background: var(--accent); width: 0; transition: width .3s; }
-.log { font: 12px/1.6 ui-monospace, Menlo, Consolas, monospace; color: var(--muted); max-height: 160px; overflow: auto; white-space: pre-wrap; }
+.log { font: 12px/1.6 ui-monospace, Menlo, Consolas, monospace; color: var(--muted); max-height: 160px; overflow: auto; white-space: pre-wrap; direction: ltr; text-align: left; }
 .note { background: var(--warn-soft); color: var(--warn); border-radius: 8px; padding: 8px 12px; font-size: 13px; margin-bottom: 12px; }
-.hidden { display: none; }
+.note.ok { background: var(--good-soft); color: var(--good); }
+.note.bad { background: var(--bad-soft); color: var(--bad); }
+.hidden { display: none !important; }
 svg.spark { vertical-align: middle; }
 .desc { white-space: pre-wrap; color: var(--muted); max-height: 220px; overflow: auto; }
-.kv { display: grid; grid-template-columns: 140px 1fr; gap: 6px 12px; }
+.kv { display: grid; grid-template-columns: 160px 1fr; gap: 6px 12px; }
+.kv > div { min-width: 0; overflow-wrap: anywhere; }
 .kv div:nth-child(odd) { color: var(--muted); }
 .serp td:first-child { width: 30px; }
 .serp tr.me td { background: var(--good-soft); font-weight: 600; }
+ol.steps { margin: 4px 0 0; padding-inline-start: 20px; }
+code { font: 12px ui-monospace, Menlo, Consolas, monospace; direction: ltr; unicode-bidi: embed; }
+
+/* chart modal */
+.overlay { position: fixed; inset: 0; background: rgba(10, 12, 16, .45); display: grid; place-items: center; padding: max(16px, env(safe-area-inset-top, 0px)) max(16px, env(safe-area-inset-right, 0px)) max(16px, env(safe-area-inset-bottom, 0px)) max(16px, env(safe-area-inset-left, 0px)); z-index: 50; }
+.modal { background: var(--card); border: 1px solid var(--line); border-radius: 14px; box-shadow: var(--shadow); width: min(760px, 100%); max-height: 100%; overflow: auto; padding: 18px; }
+.modal-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; margin-bottom: 12px; }
+.modal-head h2 { margin: 0; font-size: 16px; text-wrap: balance; }
+.mstats { display: flex; gap: 22px; flex-wrap: wrap; margin-bottom: 12px; }
+.mstats div { display: grid; }
+.mstats b { font-size: 20px; font-variant-numeric: tabular-nums; }
+.mstats > div > span { color: var(--muted); font-size: 12px; }
+.chartbox { position: relative; direction: ltr; }
+.chartbox svg { display: block; width: 100%; height: auto; }
+.chartbox text { fill: var(--muted); font-size: 11px; font-variant-numeric: tabular-nums; }
+.tip { position: absolute; pointer-events: none; background: var(--text); color: var(--card); padding: 6px 9px; border-radius: 8px; font-size: 12px; white-space: nowrap; transform: translate(-50%, -100%); margin-top: -10px; }
+.tip b { font-variant-numeric: tabular-nums; }
 </style>
 </head>
 <body>
@@ -82,12 +126,15 @@ svg.spark { vertical-align: middle; }
   <header>
     <img id="icon" alt="" hidden>
     <div>
-      <h1 id="appname">ASO Tracker</h1>
+      <h1 id="appname" data-i18n="title">ASO Tracker</h1>
       <div class="sub" id="appsub">…</div>
     </div>
     <div class="actions">
-      <button id="runQuick">Check ranks daba</button>
-      <button id="runFull" class="primary">Check + Discovery</button>
+      <div class="seg" role="group" aria-label="Language">
+        <button id="langEn" lang="en">EN</button>
+        <button id="langAr" lang="ar">العربية</button>
+      </div>
+      <button id="runFull" class="primary" data-i18n="runFull"></button>
     </div>
   </header>
 
@@ -100,48 +147,54 @@ svg.spark { vertical-align: middle; }
   </div>
 
   <nav id="tabs">
-    <button data-tab="overview" class="on">Overview</button>
-    <button data-tab="keywords">Keywords</button>
-    <button data-tab="discovery">Discovery</button>
-    <button data-tab="analysis">Analyse</button>
-    <button data-tab="charts">Top charts</button>
-    <button data-tab="settings">Settings</button>
+    <button data-tab="overview" class="on" data-i18n="tabOverview"></button>
+    <button data-tab="keywords" data-i18n="tabKeywords"></button>
+    <button data-tab="discovery" data-i18n="tabDiscovery"></button>
+    <button data-tab="analysis" data-i18n="tabAnalysis"></button>
+    <button data-tab="charts" data-i18n="tabCharts"></button>
+    <button data-tab="settings" data-i18n="tabSettings"></button>
   </nav>
 
   <!-- OVERVIEW -->
   <section id="tab-overview">
     <div class="grid" id="stats"></div>
     <div class="card">
-      <h2>Ma3lomat 3la app</h2>
-      <div class="row" style="margin-bottom:10px"><div style="max-width:200px"><select id="infoCountry"></select></div></div>
+      <h2 data-i18n="appInfo"></h2>
+      <div class="row" style="margin-bottom:10px"><div style="max-width:200px"><select id="infoCountry" aria-label="Country"></select></div></div>
       <div class="kv" id="infoKv"></div>
     </div>
     <div class="card">
-      <h2>Ratings f kol bled</h2>
+      <h2 data-i18n="ratingsByCountry"></h2>
       <div class="tablewrap"><table id="ratingsTable"></table></div>
     </div>
     <div class="card">
-      <h2>Description</h2>
-      <div class="desc" id="desc"></div>
+      <h2 data-i18n="description"></h2>
+      <div class="desc" id="desc" dir="auto"></div>
     </div>
   </section>
 
   <!-- KEYWORDS -->
   <section id="tab-keywords" class="hidden">
     <div class="card">
-      <h2>Zid keywords</h2>
-      <label>Keywords (kol wa7d f ster, wla fr9hom b virgule)</label>
-      <textarea id="newTerms" placeholder="basketball game&#10;slam dunk&#10;streetball"></textarea>
-      <label>F had l bldan</label>
+      <h2 data-i18n="addKeywords"></h2>
+      <label for="newTerms" data-i18n="kwInputLabel"></label>
+      <textarea id="newTerms" dir="auto" placeholder="basketball game&#10;slam dunk&#10;streetball"></textarea>
+      <label data-i18n="inCountries"></label>
       <div class="chips" id="addCountries"></div>
-      <div style="margin-top:12px"><button class="primary" id="addBtn">Zid</button> <span class="muted" id="addMsg"></span></div>
+      <div style="margin-top:12px"><button class="primary" id="addBtn" data-i18n="add"></button> <span class="muted" id="addMsg"></span></div>
     </div>
     <div class="card">
+      <div class="card-head">
+        <h2 data-i18n="tabKeywords"></h2>
+        <button id="refreshAll" class="with-icon"></button>
+      </div>
       <div class="row" style="margin-bottom:10px">
-        <div><label>Bled</label><select id="kwCountry"></select></div>
-        <div><label>Source</label><select id="kwSource"><option value="">Kolchi</option><option value="manual">Zditiha nta</option><option value="auto">Tl9at automatiquement</option></select></div>
-        <div><label>Rank</label><select id="kwRanked"><option value="">Kolchi</option><option value="1">Ghir li ranké fihom</option><option value="0">Ghir li machi ranké</option></select></div>
-        <div><label>9elleb</label><input id="kwSearch" placeholder="keyword…"></div>
+        <div><label for="kwCountry" data-i18n="country"></label><select id="kwCountry"></select></div>
+        <div><label for="kwSource" data-i18n="source"></label><select id="kwSource">
+          <option value="" data-i18n="all"></option><option value="manual" data-i18n="srcManual"></option><option value="auto" data-i18n="srcAuto"></option></select></div>
+        <div><label for="kwRanked" data-i18n="rankF"></label><select id="kwRanked">
+          <option value="" data-i18n="all"></option><option value="1" data-i18n="onlyRanked"></option><option value="0" data-i18n="onlyNot"></option></select></div>
+        <div><label for="kwSearch" data-i18n="search"></label><input id="kwSearch" dir="auto" data-i18n-ph="searchPh"></div>
       </div>
       <div class="tablewrap"><table id="kwTable"></table></div>
     </div>
@@ -154,13 +207,14 @@ svg.spark { vertical-align: middle; }
   <!-- DISCOVERY -->
   <section id="tab-discovery" class="hidden">
     <div class="card">
-      <h2>Kifach kaykhdem</h2>
-      <div class="muted">Kol nhar, tool kayjm3 keywords jdad mn smiya, subtitle o description dyalk, mn keywords li ktbti f Settings, o mn smiyat o subtitles dyal concurrents li kaybano f search. Kaytesti kol wa7d, o ila l9a app dyalk ranké fih, kayzido wa7do l liste dyal Keywords (b badge <span class="badge auto">auto</span>) o kayb9a ytba3o kol nhar. Keywords li ma ranké fihom kayt3awdo ytestaw mn ba3d 7 iyam.</div>
+      <h2 data-i18n="discoveryHowTitle"></h2>
+      <div class="muted" data-i18n="discoveryHow"></div>
     </div>
     <div class="card">
       <div class="row" style="margin-bottom:10px">
-        <div><label>Bled</label><select id="cdCountry"></select></div>
-        <div><label>Natija</label><select id="cdRanked"><option value="">Kolchi</option><option value="1">Ranké ✅</option><option value="0">Machi ranké</option></select></div>
+        <div><label for="cdCountry" data-i18n="country"></label><select id="cdCountry"></select></div>
+        <div><label for="cdRanked" data-i18n="result"></label><select id="cdRanked">
+          <option value="" data-i18n="all"></option><option value="1" data-i18n="rankedOk"></option><option value="0" data-i18n="notRanking"></option></select></div>
       </div>
       <div class="tablewrap"><table id="cdTable"></table></div>
     </div>
@@ -169,9 +223,9 @@ svg.spark { vertical-align: middle; }
   <!-- ANALYSIS -->
   <section id="tab-analysis" class="hidden">
     <div class="card">
-      <h2>Kalimat li kaykhdmo bihom concurrents</h2>
-      <div class="muted" style="margin-bottom:10px">Had kalimat jat mn smiyat o subtitles dyal apps li kaybano f awel resultats dyal keywords dyalk. Kalma li kayna bzzaf 3nd concurrents o ma kaynach f smiya/subtitle wla keywords dyalk = fors bach tzidha.</div>
-      <div class="row" style="margin-bottom:10px"><div style="max-width:200px"><select id="anCountry"></select></div></div>
+      <h2 data-i18n="anTitle"></h2>
+      <div class="muted" style="margin-bottom:10px" data-i18n="anHelp"></div>
+      <div class="row" style="margin-bottom:10px"><div style="max-width:200px"><select id="anCountry" aria-label="Country"></select></div></div>
       <div class="tablewrap"><table id="anTable"></table></div>
     </div>
   </section>
@@ -179,7 +233,7 @@ svg.spark { vertical-align: middle; }
   <!-- CHARTS -->
   <section id="tab-charts" class="hidden">
     <div class="card">
-      <h2>Rank f top charts (Top Free, top 100)</h2>
+      <h2 data-i18n="chTitle"></h2>
       <div class="tablewrap"><table id="chTable"></table></div>
     </div>
   </section>
@@ -187,72 +241,246 @@ svg.spark { vertical-align: middle; }
   <!-- SETTINGS -->
   <section id="tab-settings" class="hidden">
     <div class="card">
-      <h2>Settings</h2>
+      <h2 data-i18n="tabSettings"></h2>
       <div class="row">
-        <div><label>Apple ID dyal app</label><input id="cfgApp"></div>
-        <div id="cfgHourWrap"><label>Sa3a dyal check kol nhar (0-23)</label><input id="cfgHour" type="number" min="0" max="23"></div>
-        <div><label>Ch7al mn keyword jdid ytesta f kol bled</label><input id="cfgCand" type="number" min="0" max="200"></div>
+        <div><label for="cfgApp" data-i18n="appId"></label><input id="cfgApp" dir="ltr"></div>
+        <div id="cfgHourWrap"><label for="cfgHour" data-i18n="hour"></label><input id="cfgHour" type="number" min="0" max="23"></div>
+        <div><label for="cfgCand" data-i18n="cand"></label><input id="cfgCand" type="number" min="0" max="200"></div>
       </div>
-      <label>L bldan (codes b virgule: us, gb, fr, ma, sa…)</label>
-      <input id="cfgCountries">
-      <label>Keywords dyalk f App Store Connect (l 100 7arf)</label>
-      <textarea id="cfgKw" placeholder="basketball,dunk,hoops,streetball,…"></textarea>
-      <div style="margin-top:12px"><button class="primary" id="saveCfg">Sjjel</button> <span class="muted" id="cfgMsg"></span></div>
+      <label for="cfgCountries" data-i18n="countriesL"></label>
+      <input id="cfgCountries" dir="ltr">
+      <label for="cfgKw" data-i18n="myKw"></label>
+      <textarea id="cfgKw" dir="auto" placeholder="basketball,dunk,hoops,streetball,…"></textarea>
+      <div style="margin-top:12px"><button class="primary" id="saveCfg" data-i18n="save"></button> <span class="muted" id="cfgMsg"></span></div>
     </div>
     <div class="card hidden" id="ghCard">
       <h2>GitHub</h2>
-      <div class="muted">Had page kat9ra data mn GitHub. Bach tzid keywords, tbdel settings wla tbda check mn hna, khass <b>token</b> dyal GitHub. Token kayb9a ghir f had browser, ma kaytsjjel f 7ta blasa khra.</div>
+      <div class="muted" data-i18n="ghIntro"></div>
       <div class="row">
-        <div><label>Repo</label><input id="ghRepo" placeholder="owner/repo"></div>
-        <div><label>Token</label><input id="ghToken" type="password" placeholder="github_pat_…" autocomplete="off"></div>
+        <div><label for="ghRepo" data-i18n="repo"></label><input id="ghRepo" dir="ltr" placeholder="owner/repo"></div>
+        <div><label for="ghToken" data-i18n="token"></label><input id="ghToken" dir="ltr" type="password" placeholder="github_pat_…" autocomplete="off"></div>
       </div>
-      <div style="margin-top:12px"><button class="primary" id="ghSave">Sjjel token</button> <span class="muted" id="ghMsg"></span></div>
-      <label>Kifach tsawb token (mra wa7da)</label>
-      <ol class="muted" style="margin:4px 0 0; padding-left:20px">
-        <li>7ell <a href="https://github.com/settings/personal-access-tokens/new" target="_blank" rel="noopener">github.com/settings/personal-access-tokens/new</a></li>
-        <li>Token name: <b>dashboard</b>, Expiration: li bghiti</li>
-        <li>Repository access: <b>Only select repositories</b> ➜ khtar <b id="ghRepoName">aso-tracker</b></li>
-        <li>Permissions ➜ Repository permissions: <b>Contents: Read and write</b> o <b>Actions: Read and write</b></li>
-        <li>Generate token, kopi-h o 7ett-h hna</li>
-      </ol>
-      <div class="muted" style="margin-top:10px">Check automatique kaytdar kol nhar f <b>08:17 UTC</b> (09:17 f lmaghrib). Sa3a katbdel f <code>.github/workflows/track.yml</code>. <a id="ghActions" href="#" target="_blank" rel="noopener">Chouf runs f GitHub Actions</a></div>
+      <div style="margin-top:12px"><button class="primary" id="ghSave" data-i18n="saveToken"></button> <span class="muted" id="ghMsg"></span></div>
+      <label data-i18n="howToken"></label>
+      <ol class="muted steps" id="ghSteps"></ol>
+      <div class="muted" style="margin-top:10px" id="ghSchedule"></div>
     </div>
     <div class="card">
-      <h2>Mode dyal search</h2>
+      <h2 data-i18n="searchMode"></h2>
       <div id="apiMode" class="muted"></div>
     </div>
   </section>
 </div>
 
-<script>
-const $ = s => document.querySelector(s);
-const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
-const flag = cc => cc.toUpperCase().replace(/./g, c => String.fromCodePoint(127397 + c.charCodeAt(0)));
-let S = null, KW = [], CD = [], tab = "overview";
+<div class="overlay hidden" id="chartModal" role="dialog" aria-modal="true" aria-labelledby="chartTitle">
+  <div class="modal">
+    <div class="modal-head">
+      <h2 id="chartTitle"></h2>
+      <button class="icon-btn" id="chartClose" data-i18n-title="close"></button>
+    </div>
+    <div class="mstats" id="chartStats"></div>
+    <div class="chartbox" id="chartBox"></div>
+    <div class="muted" id="chartNote" style="margin-top:8px"></div>
+    <div style="margin-top:12px"><button class="small" id="chartTableBtn"></button></div>
+    <div class="tablewrap hidden" id="chartTableWrap" style="margin-top:8px"><table id="chartTable"></table></div>
+  </div>
+</div>
 
-// Local (python tracker.py): kolchi kaytdar b /api/*. F GitHub Pages: data kat t9ra mn data/*.json,
-// o l bdil (keywords, settings, check) kaytdar b GitHub API: kaybdel config.json o kaybda workflow.
-const LOCAL = /^(localhost|127\.0\.0\.1)$/.test(location.hostname);
+<script>
+// ---------------------------------------------------------------- i18n
+const I18N = {
+  en: {
+    title: "ASO Tracker",
+    lastCheck: "Last full check: {d}", lastRefresh: "last refresh: {d}", noCheck: "No check yet",
+    runFull: "Full check + discovery", refreshAll: "Refresh all keywords",
+    tabOverview: "Overview", tabKeywords: "Keywords", tabDiscovery: "Discovery", tabAnalysis: "Analysis", tabCharts: "Top charts", tabSettings: "Settings",
+    kwTracked: "Keywords tracked", ranked: "Ranking", top3: "In top 3", top10: "In top 10", upDown: "Up / down today", autoFound: "Found automatically",
+    bestChart: "Top chart: {g} {c}", notInCharts: "Top charts: not in top 100",
+    appInfo: "App details", fName: "Name", fSubtitle: "Subtitle", fDeveloper: "Developer", fRating: "Rating", ratingsN: "{n} ratings", noRating: "No ratings yet",
+    fVersion: "Version", fUpdated: "Last updated", fReleased: "Released", fCategories: "Categories", fSize: "Size", fMinIos: "Minimum iOS",
+    fAge: "Age rating", fPrice: "Price", fLanguages: "Languages", fLink: "Link",
+    noData: "No data yet. Run a check first.", ratingsByCountry: "Ratings by country", country: "Country", ratings: "Ratings", rating: "Rating", version: "Version",
+    description: "Description",
+    addKeywords: "Add keywords", kwInputLabel: "Keywords (one per line, or separated by commas)", inCountries: "In these countries", add: "Add",
+    allCountries: "All countries", source: "Source", all: "All", srcManual: "Added by you", srcAuto: "Found automatically",
+    rankF: "Rank", onlyRanked: "Ranking only", onlyNot: "Not ranking", search: "Search", searchPh: "keyword…",
+    keyword: "Keyword", rankToday: "Rank today", change: "Change", best: "Best", last30: "Last 30 days", actions: "Actions",
+    badgeYou: "you", badgeAuto: "auto", notChecked: "not yet", newRank: "new", dropped: "dropped out",
+    refreshKw: "Refresh rank", chartKw: "Rank history", del: "Remove", confirmDelete: "Remove this keyword?",
+    emptyKw: "No keywords yet. Add some above or run a full check.",
+    serpTitle: "Top 10 for “{k}”", app: "App",
+    discoveryHowTitle: "How it works",
+    discoveryHow: "Every day the tracker builds new keyword ideas from your app's name, subtitle and description, from the App Store Connect keywords in Settings, and from the names and subtitles of competing apps in search results. It tests each one. When your app ranks for it, the keyword is added to the Keywords list with an <span class=\"badge auto\">auto</span> badge and tracked daily. Keywords where your app doesn't rank are retested after 7 days.",
+    result: "Result", rankedOk: "Ranking ✅", notRanking: "not ranking", origin: "Origin", tested: "Tested",
+    emptyCd: "No keywords tested yet. Run a full check.",
+    oMy: "Your keywords", oOwn: "Your name/subtitle", oComp: "Competitors ({n}×)", oDesc: "Your description", oCombo: "Combination",
+    anTitle: "Words competitors use",
+    anHelp: "These words come from the names and subtitles of apps in the top results for your keywords. A word many competitors use that is missing from your name, subtitle and keywords is an opportunity.",
+    word: "Word", competitorsN: "Competitors", inTitle: "In your name/subtitle", inKeywords: "In your keywords", inDesc: "In description",
+    yourRank: "Your rank", tip: "Advice", tipTrademark: "⚠️ trademark, don't use", tipGood: "good", tipInKw: "in your keywords", tipAdd: "add it",
+    emptyAn: "No data yet. Add keywords and run a check.",
+    chTitle: "Rank in top charts (Top Free, top 100)", category: "Category", notTop100: "not in top 100", date: "Date",
+    appId: "App Apple ID", hour: "Daily check hour (0-23)", cand: "New keywords to test per country", save: "Save", saved: "Saved ✔",
+    countriesL: "Countries (comma-separated codes: us, gb, fr, ma, sa…)", myKw: "Your App Store Connect keywords (100 characters)",
+    ghIntro: "This page reads its data from GitHub. To add keywords, change settings, refresh ranks or start a check from here, add a GitHub token. The token stays in this browser only.",
+    repo: "Repository", token: "Token", saveToken: "Save token", tokenSaved: "Saved in this browser ✔", tokenRemoved: "Token removed",
+    howToken: "How to create a token (once)",
+    s1: "Open {link}", s2: "Token name: <b>dashboard</b>, expiration: your choice",
+    s3: "Repository access: <b>Only select repositories</b> ➜ choose <b>{repo}</b>",
+    s4: "Permissions ➜ Repository permissions: <b>Contents: Read and write</b> and <b>Actions: Read and write</b>",
+    s5: "Generate the token, copy it and paste it here",
+    schedule: "The automatic check runs every day at <b>08:17 UTC</b>. Change it in <code>.github/workflows/track.yml</code>.", seeRuns: "See runs on GitHub Actions",
+    searchMode: "Search mode",
+    apiOk: "✅ Search API available: ranks are checked down to <b>#200</b>.",
+    apiBlocked: "⚠️ Apple blocked the search API from this network. Only the first <b>~10–20 results</b> per keyword are checked (the real App Store order).",
+    apiNone: "No check has run yet.",
+    needToken: "Add a GitHub token in Settings ➜ GitHub first.",
+    ghRejected: "GitHub rejected the token ({s}). Check that it has Contents and Actions: Read and write. {m}",
+    ghWorking: "⏳ Running on GitHub. New data appears here when it finishes (full check: about 5–15 minutes). {link}",
+    ghKwWorking: "⏳ Refreshing {n} keywords on GitHub, about 1–3 minutes… {link}",
+    follow: "Follow it on GitHub Actions",
+    runRunning: "⏳ A check is running on GitHub ({s}). {link}", runFailed: "The last check on GitHub failed. {link}", seeError: "See the error",
+    noDataGh: "No data yet. The first check must finish on GitHub Actions. {link}", seeRunsShort: "See runs",
+    addedLocal: "{n} added. Refresh them to see their rank.", addedGh: "{n} added to the config ✔",
+    savedGh: "Saved on GitHub ✔. Ranks are being checked again.", runDone: "Check finished. Data updated ✔",
+    refreshDone: "Updated {n} keywords ✔", runFailedShort: "The check failed on GitHub. {link}", runCancelled: "The check was cancelled on GitHub, probably replaced by a newer one. {link}",
+    stInfo: "App details ({c})", stCharts: "Top charts ({c})", stKeyword: "Keyword “{k}” ({c})", stDiscovery: "Discovery: “{k}” ({c})", stDone: "Done", stError: "Error: {m}",
+    historyTitle: "Rank history: “{k}”", close: "Close", today: "Today", avg: "Average", daysTracked: "Days tracked",
+    oneCheck: "Only one check so far. The chart fills in as the tracker runs each day.",
+    notInTop: "Not in top {n}", notRankedLane: "not ranked", showTable: "Show table", hideTable: "Hide table", rankLabel: "Rank #{n}",
+  },
+  ar: {
+    title: "متتبّع ASO",
+    lastCheck: "آخر فحص كامل: {d}", lastRefresh: "آخر تحديث: {d}", noCheck: "لم يُجرَ أي فحص بعد",
+    runFull: "فحص كامل + اكتشاف", refreshAll: "تحديث كل الكلمات المفتاحية",
+    tabOverview: "نظرة عامة", tabKeywords: "الكلمات المفتاحية", tabDiscovery: "الاكتشاف", tabAnalysis: "التحليل", tabCharts: "قوائم الأفضل", tabSettings: "الإعدادات",
+    kwTracked: "كلمات مفتاحية مُتتبَّعة", ranked: "يظهر فيها التطبيق", top3: "ضمن أفضل 3", top10: "ضمن أفضل 10", upDown: "صعود / هبوط اليوم", autoFound: "اكتُشفت تلقائيًا",
+    bestChart: "قائمة الأفضل: {g} {c}", notInCharts: "قوائم الأفضل: خارج أفضل 100",
+    appInfo: "تفاصيل التطبيق", fName: "الاسم", fSubtitle: "العنوان الفرعي", fDeveloper: "المطوّر", fRating: "التقييم", ratingsN: "{n} تقييم", noRating: "لا توجد تقييمات بعد",
+    fVersion: "الإصدار", fUpdated: "آخر تحديث", fReleased: "تاريخ الإطلاق", fCategories: "الفئات", fSize: "الحجم", fMinIos: "أدنى إصدار iOS",
+    fAge: "التصنيف العمري", fPrice: "السعر", fLanguages: "اللغات", fLink: "الرابط",
+    noData: "لا توجد بيانات بعد. شغّل فحصًا أولًا.", ratingsByCountry: "التقييمات حسب الدولة", country: "الدولة", ratings: "عدد التقييمات", rating: "التقييم", version: "الإصدار",
+    description: "الوصف",
+    addKeywords: "إضافة كلمات مفتاحية", kwInputLabel: "الكلمات المفتاحية (كلمة في كل سطر، أو افصل بينها بفواصل)", inCountries: "في هذه الدول", add: "إضافة",
+    allCountries: "كل الدول", source: "المصدر", all: "الكل", srcManual: "أضفتها أنت", srcAuto: "اكتُشفت تلقائيًا",
+    rankF: "الترتيب", onlyRanked: "التي يظهر فيها فقط", onlyNot: "التي لا يظهر فيها", search: "بحث", searchPh: "كلمة مفتاحية…",
+    keyword: "الكلمة المفتاحية", rankToday: "الترتيب اليوم", change: "التغيّر", best: "الأفضل", last30: "آخر 30 يومًا", actions: "إجراءات",
+    badgeYou: "أنت", badgeAuto: "تلقائي", notChecked: "لم تُفحص", newRank: "جديد", dropped: "خرج من النتائج",
+    refreshKw: "تحديث الترتيب", chartKw: "سجل الترتيب", del: "حذف", confirmDelete: "هل تريد حذف هذه الكلمة المفتاحية؟",
+    emptyKw: "لا توجد كلمات مفتاحية بعد. أضف بعضها في الأعلى أو شغّل فحصًا كاملًا.",
+    serpTitle: "أفضل 10 نتائج لـ «{k}»", app: "التطبيق",
+    discoveryHowTitle: "كيف يعمل",
+    discoveryHow: "يولّد المتتبّع كل يوم أفكارًا لكلمات مفتاحية جديدة من اسم تطبيقك وعنوانه الفرعي ووصفه، ومن كلمات App Store Connect المحفوظة في الإعدادات، ومن أسماء التطبيقات المنافسة وعناوينها الفرعية في نتائج البحث. ثم يختبر كل كلمة، فإذا ظهر تطبيقك فيها أُضيفت إلى قائمة الكلمات المفتاحية بشارة <span class=\"badge auto\">تلقائي</span> وتُتبَّع يوميًا. أما الكلمات التي لا يظهر فيها تطبيقك فيُعاد اختبارها بعد 7 أيام.",
+    result: "النتيجة", rankedOk: "يظهر ✅", notRanking: "لا يظهر", origin: "المصدر", tested: "تاريخ الاختبار",
+    emptyCd: "لم تُختبر أي كلمة بعد. شغّل فحصًا كاملًا.",
+    oMy: "كلماتك المفتاحية", oOwn: "اسم تطبيقك/عنوانه الفرعي", oComp: "المنافسون ({n}×)", oDesc: "وصف تطبيقك", oCombo: "تركيب كلمات",
+    anTitle: "الكلمات التي يستخدمها المنافسون",
+    anHelp: "هذه الكلمات مأخوذة من أسماء التطبيقات وعناوينها الفرعية في أعلى نتائج كلماتك المفتاحية. الكلمة التي يستخدمها كثير من المنافسين وتغيب عن اسم تطبيقك وعنوانه الفرعي وكلماتك المفتاحية فرصةٌ لك.",
+    word: "الكلمة", competitorsN: "عدد المنافسين", inTitle: "في الاسم/العنوان الفرعي", inKeywords: "في كلماتك المفتاحية", inDesc: "في الوصف",
+    yourRank: "ترتيبك", tip: "نصيحة", tipTrademark: "⚠️ علامة تجارية، لا تستخدمها", tipGood: "جيد", tipInKw: "موجودة في كلماتك", tipAdd: "أضِفها",
+    emptyAn: "لا توجد بيانات بعد. أضف كلمات مفتاحية وشغّل فحصًا.",
+    chTitle: "الترتيب في قوائم الأفضل (الأفضل المجانية، أفضل 100)", category: "الفئة", notTop100: "خارج أفضل 100", date: "التاريخ",
+    appId: "معرّف التطبيق في Apple", hour: "ساعة الفحص اليومي (0-23)", cand: "عدد الكلمات الجديدة المختبرة لكل دولة", save: "حفظ", saved: "تم الحفظ ✔",
+    countriesL: "الدول (رموز مفصولة بفواصل: us, gb, fr, ma, sa…)", myKw: "كلماتك المفتاحية في App Store Connect (100 حرف)",
+    ghIntro: "تقرأ هذه الصفحة بياناتها من GitHub. لإضافة كلمات مفتاحية أو تغيير الإعدادات أو تحديث الترتيب أو بدء فحص من هنا، أضف رمز وصول (Token) من GitHub. يبقى الرمز في هذا المتصفح فقط.",
+    repo: "المستودع", token: "الرمز (Token)", saveToken: "حفظ الرمز", tokenSaved: "حُفظ في هذا المتصفح ✔", tokenRemoved: "حُذف الرمز",
+    howToken: "طريقة إنشاء الرمز (مرة واحدة)",
+    s1: "افتح {link}", s2: "اسم الرمز: <b>dashboard</b>، ومدة الصلاحية حسب رغبتك",
+    s3: "الوصول إلى المستودعات: <b>Only select repositories</b> ← اختر <b>{repo}</b>",
+    s4: "الأذونات ← Repository permissions: <b>Contents: Read and write</b> و<b>Actions: Read and write</b>",
+    s5: "أنشئ الرمز وانسخه ثم الصقه هنا",
+    schedule: "يعمل الفحص التلقائي يوميًا الساعة <b>08:17</b> بتوقيت UTC. يمكنك تغييره في <code>.github/workflows/track.yml</code>.", seeRuns: "عرض عمليات التشغيل في GitHub Actions",
+    searchMode: "وضع البحث",
+    apiOk: "✅ واجهة البحث متاحة: يُفحص الترتيب حتى المركز <b>200</b>.",
+    apiBlocked: "⚠️ حجبت Apple واجهة البحث من هذه الشبكة. تُفحص أول <b>10–20 نتيجة</b> تقريبًا لكل كلمة (الترتيب الفعلي في App Store).",
+    apiNone: "لم يُجرَ أي فحص بعد.",
+    needToken: "أضف رمز GitHub أولًا من الإعدادات ← GitHub.",
+    ghRejected: "رفض GitHub الرمز ({s}). تأكد من أن له صلاحيتي Contents و Actions: Read and write. {m}",
+    ghWorking: "⏳ يجري التشغيل على GitHub. ستظهر البيانات الجديدة هنا عند انتهائه (الفحص الكامل يستغرق 5 إلى 15 دقيقة تقريبًا). {link}",
+    ghKwWorking: "⏳ جارٍ تحديث {n} من الكلمات المفتاحية على GitHub، من دقيقة إلى 3 دقائق تقريبًا… {link}",
+    follow: "تابعه في GitHub Actions",
+    runRunning: "⏳ يجري فحص على GitHub الآن ({s}). {link}", runFailed: "فشل آخر فحص على GitHub. {link}", seeError: "عرض الخطأ",
+    noDataGh: "لا توجد بيانات بعد. يجب أن يكتمل الفحص الأول على GitHub Actions. {link}", seeRunsShort: "عرض العمليات",
+    addedLocal: "أُضيفت {n}. حدّثها لترى ترتيبها.", addedGh: "أُضيفت {n} إلى الإعدادات ✔",
+    savedGh: "حُفظ على GitHub ✔. يُعاد الآن فحص الترتيب.", runDone: "اكتمل الفحص. حُدّثت البيانات ✔",
+    refreshDone: "حُدّث ترتيب {n} من الكلمات المفتاحية ✔", runFailedShort: "فشل الفحص على GitHub. {link}", runCancelled: "أُلغي الفحص على GitHub، غالبًا لأن فحصًا أحدث حلّ محله. {link}",
+    stInfo: "تفاصيل التطبيق ({c})", stCharts: "قوائم الأفضل ({c})", stKeyword: "الكلمة «{k}» ({c})", stDiscovery: "اكتشاف: «{k}» ({c})", stDone: "اكتمل", stError: "خطأ: {m}",
+    historyTitle: "سجل الترتيب: «{k}»", close: "إغلاق", today: "اليوم", avg: "المتوسط", daysTracked: "أيام التتبع",
+    oneCheck: "يوجد فحص واحد فقط حتى الآن. سيكتمل الرسم البياني مع الفحص اليومي.",
+    notInTop: "خارج أفضل {n}", notRankedLane: "لا يظهر", showTable: "عرض الجدول", hideTable: "إخفاء الجدول", rankLabel: "المركز {n}",
+  },
+};
+// origins l9dam dyal discovery (9bel ma wllaw codes)
+const LEGACY_ORIGINS = {"keywords dyalk": "my_keywords", "smiya/subtitle dyalk": "own_title", "description dyalk": "description", "combinaison": "combo"};
+
+const $ = s => document.querySelector(s);
+const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({"&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;"}[c]));
+const bdi = s => `<bdi>${esc(s)}</bdi>`;
+const flag = cc => cc.toUpperCase().replace(/./g, c => String.fromCodePoint(127397 + c.charCodeAt(0)));
+const sleep = ms => new Promise(r => setTimeout(r, ms));
 const store = {
   get: k => { try { return localStorage.getItem(k) || ""; } catch { return ""; } },
   set: (k, v) => { try { localStorage.setItem(k, v); } catch {} },
 };
+let LANG = store.get("aso_lang") || ((navigator.language || "").startsWith("ar") ? "ar" : "en");
+const t = (key, vars = {}) => (I18N[LANG][key] ?? I18N.en[key] ?? key).replace(/\{(\w+)\}/g, (_, v) => vars[v] ?? "");
+const locale = () => LANG === "ar" ? "ar-u-nu-latn" : "en";
+const fmtDate = (d, opts = {day: "numeric", month: "short", year: "numeric"}) => d ? new Intl.DateTimeFormat(locale(), opts).format(new Date(d.length <= 10 ? d + "T12:00:00" : d)) : "";
+const fmtDateTime = d => d ? fmtDate(d, {day: "numeric", month: "short", hour: "2-digit", minute: "2-digit"}) : "";
+const num = n => (n ?? 0).toLocaleString(locale());
+function originLabel(o) {
+  o = LEGACY_ORIGINS[o] || o || "";
+  const m = o.match(/^(?:competitors:|concurrents \()(\d+)/);
+  if (m) return t("oComp", {n: m[1]});
+  return {my_keywords: t("oMy"), own_title: t("oOwn"), description: t("oDesc"), combo: t("oCombo")}[o] || o;
+}
+function stepLabel(step) {
+  if (!step) return "";
+  const [kind, rest = ""] = step.split(/:(.*)/s);
+  const [k, c] = rest.includes("|") ? [rest.slice(0, rest.lastIndexOf("|")), rest.slice(rest.lastIndexOf("|") + 1)] : ["", rest];
+  return {info: t("stInfo", {c}), charts: t("stCharts", {c}), keyword: t("stKeyword", {k: bdi(k), c}), discovery: t("stDiscovery", {k: bdi(k), c}), done: t("stDone")}[kind] || esc(step);
+}
+
+const ICONS = {
+  refresh: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12a9 9 0 0 1-15.5 6.2L3 16"/><path d="M3 12a9 9 0 0 1 15.5-6.2L21 8"/><path d="M21 3v5h-5"/><path d="M3 21v-5h5"/></svg>',
+  chart: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 3v18h18"/><path d="M7 14l4-4 3 3 5-6"/></svg>',
+  trash: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6h18"/><path d="M8 6V4h8v2"/><path d="M6 6l1 14h10l1-14"/></svg>',
+  close: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>',
+};
+
+// ---------------------------------------------------------------- data (local server / GitHub)
+// Local (python tracker.py): kolchi b /api/*. F GitHub Pages: data mn data/*.json (wla mn GitHub API ila kan token,
+// bach tkon jdida), o l bdil kaytdar b GitHub API: config.json + workflow.
+const LOCAL = /^(localhost|127\.0\.0\.1)$/.test(location.hostname);
 const GH = {
   repo: () => store.get("aso_repo") || `${location.hostname.split(".")[0]}/${location.pathname.split("/")[1] || "aso-tracker"}`,
   token: () => store.get("aso_token"),
 };
+const actionsUrl = () => `https://github.com/${GH.repo()}/actions`;
+const ghLink = (url = actionsUrl(), key = "follow") => `<a href="${esc(url)}" target="_blank" rel="noopener">${t(key)}</a>`;
+
+let S = null, KW = [], CD = [], tab = "overview";
 let staticCache = {};
-const staticGet = name => staticCache[name] ??= fetch(`data/${name}?t=${Date.now()}`).then(r => r.ok ? r.json() : null);
 
 async function ghApi(path, opts = {}) {
-  if (!GH.token()) throw new Error("Khass GitHub token. Zido f Settings ➜ GitHub.");
+  if (!GH.token()) throw new Error(t("needToken"));
   const r = await fetch(`https://api.github.com/repos/${GH.repo()}${path}`, {...opts, headers: {
-    Authorization: `Bearer ${GH.token()}`, Accept: "application/vnd.github+json", "Content-Type": "application/json"}});
+    Authorization: `Bearer ${GH.token()}`, Accept: "application/vnd.github+json", "Content-Type": "application/json", ...(opts.headers || {})}});
   if (!r.ok) {
     const m = (await r.json().catch(() => ({}))).message || "";
-    throw new Error(r.status === 401 || r.status === 403 ? `GitHub rfed token (${r.status}). Tfta9 bli 3ndo Contents o Actions: Read and write. ${m}` : `GitHub ${r.status}: ${m}`);
+    throw new Error(r.status === 401 || r.status === 403 ? t("ghRejected", {s: r.status, m: esc(m)}) : `GitHub ${r.status}: ${esc(m)}`);
   }
-  return r.status === 204 ? {} : r.json();
+  if (r.status === 204) return {};
+  return (opts.headers || {}).Accept === "application/vnd.github.raw+json" ? r.text() : r.json();
+}
+function staticGet(name) {
+  return staticCache[name] ??= (async () => {
+    if (GH.token()) {
+      try { return JSON.parse(await ghApi(`/contents/docs/data/${name}?ref=main`, {headers: {Accept: "application/vnd.github.raw+json"}})); } catch {}
+    }
+    const r = await fetch(`data/${name}?t=${Date.now()}`);
+    return r.ok ? r.json() : null;
+  })();
 }
 async function editConfig(change) {
   const f = await ghApi("/contents/config.json");
@@ -275,6 +503,28 @@ function configRemove(cfg, term, country) {
   cfg.removed_keywords = [...new Set([...(cfg.removed_keywords || []), `${term}|${country}`])];
 }
 
+// kaybda workflow (ila dispatch) wla kayl9a run dyal push, o kaytsenna 7ta ykmel
+async function ghWaitRun({dispatch, event}) {
+  const since = Date.now() - 15000;
+  if (dispatch) await ghApi("/actions/workflows/track.yml/dispatches", {method: "POST", body: JSON.stringify({ref: "main", inputs: dispatch})});
+  let id = null;
+  for (let i = 0; i < 240; i++) {
+    await sleep(i < 4 ? 4000 : 8000);
+    let run;
+    if (!id) {
+      const r = await ghApi(`/actions/workflows/track.yml/runs?event=${event}&per_page=5`);
+      run = r.workflow_runs.find(x => Date.parse(x.created_at) >= since);
+      if (!run) continue;
+      id = run.id;
+    } else run = await ghApi(`/actions/runs/${id}`);
+    if (run.status === "completed") {
+      if (run.conclusion === "success") return run;
+      throw new Error(t(run.conclusion === "cancelled" ? "runCancelled" : "runFailedShort", {link: ghLink(run.html_url, "seeError")}));
+    }
+  }
+  throw new Error(t("runFailedShort", {link: ghLink()}));
+}
+
 async function api(p, body) {
   if (LOCAL) return fetch(p, body ? {method: "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify(body)} : {}).then(r => r.json());
   const u = new URL(p, location.origin);
@@ -286,226 +536,394 @@ async function api(p, body) {
     if (u.pathname === "/api/analysis") return ((await staticGet("analysis.json")) || {})[u.searchParams.get("country")] || {words: [], sample: 0};
   }
   if (u.pathname === "/api/keywords") {
-    const terms = body.terms.split(/[,\n]/).map(t => t.trim().toLowerCase()).filter(Boolean);
-    await editConfig(cfg => { configAdd(cfg, terms, body.countries); return `Zid keywords: ${terms.join(", ")}`; });
+    const terms = body.terms.split(/[,\n]/).map(s => s.trim().toLowerCase()).filter(Boolean);
+    await editConfig(cfg => { configAdd(cfg, terms, body.countries); return "update"; });
     return {added: terms.length * body.countries.length, github: true};
   }
   if (u.pathname === "/api/keywords/delete") {
     const gone = KW.filter(k => body.ids.includes(k.id));
-    await editConfig(cfg => { gone.forEach(k => configRemove(cfg, k.term, k.country)); return `7ayed keywords: ${gone.map(k => k.term + "|" + k.country).join(", ")}`; });
+    await editConfig(cfg => { gone.forEach(k => configRemove(cfg, k.term, k.country)); return "update"; });
     return {ok: true, github: true};
   }
   if (u.pathname === "/api/config") {
     await editConfig(cfg => {
       cfg.app_id = body.app_id; cfg.candidates_per_run = +body.candidates_per_run; cfg.my_keywords = body.my_keywords;
       cfg.countries = body.countries.split(",").map(c => c.trim().toLowerCase()).filter(Boolean);
-      return "Bdel settings";
+      return "update";
     });
     return {ok: true, github: true};
   }
-  if (u.pathname === "/api/run") {
-    await ghApi("/actions/workflows/track.yml/dispatches", {method: "POST", body: JSON.stringify({ref: "main", inputs: {discover: String(body.discover)}})});
-    return {ok: true, github: true};
-  }
 }
 
-function flash(msg, bad) {
+// ---------------------------------------------------------------- render
+function flash(msg, kind) {
   const f = $("#flash");
-  f.innerHTML = msg; f.classList.remove("hidden");
-  f.style.background = bad ? "var(--bad-soft)" : ""; f.style.color = bad ? "var(--bad)" : "";
+  f.innerHTML = msg; f.classList.remove("hidden", "ok", "bad");
+  if (kind) f.classList.add(kind);
 }
-const actionsUrl = () => `https://github.com/${GH.repo()}/actions`;
-const GH_WAIT = `Ghaybda check f GitHub daba. Data jdida ghatban f had page mn ba3d chi <b>3 l 10 d9aye9</b> (dir refresh). <a href="${actionsUrl()}" target="_blank" rel="noopener">Tba3o f GitHub Actions</a>`;
-async function ghRunStatus() {
-  if (LOCAL || !GH.token()) return;
-  try {
-    const r = await ghApi("/actions/runs?per_page=1");
-    const run = r.workflow_runs?.[0];
-    if (run && run.status !== "completed") flash(`⏳ Check khdam daba f GitHub (${run.status}). Dir refresh mn ba3d chwiya. <a href="${run.html_url}" target="_blank" rel="noopener">Tba3o</a>`);
-    else if (run && run.conclusion === "failure") flash(`Akher check f GitHub ma khdamch. <a href="${run.html_url}" target="_blank" rel="noopener">Chouf l error</a>`, true);
-  } catch (e) { flash(esc(e.message), true); }
-}
-
 function spark(hist) {
   const pts = hist.slice(-30);
   if (pts.length < 2) return "";
   const W = 90, H = 24, max = Math.max(...pts.map(p => p.rank || p.depth || 11), 11);
   const xy = pts.map((p, i) => [i * W / (pts.length - 1), p.rank ? 2 + (p.rank - 1) / (max - 1) * (H - 4) : H - 1]);
   const d = xy.map((p, i) => (i ? "L" : "M") + p[0].toFixed(1) + " " + p[1].toFixed(1)).join(" ");
-  return `<svg class="spark" width="${W}" height="${H}"><path d="${d}" fill="none" stroke="var(--accent)" stroke-width="1.5"/></svg>`;
+  return `<svg class="spark" width="${W}" height="${H}" style="direction:ltr" aria-hidden="true"><path d="${d}" fill="none" stroke="var(--accent)" stroke-width="1.5"/></svg>`;
 }
 function delta(k) {
   if (!k.rank && !k.prev) return "";
-  if (k.rank && !k.prev) return `<span class="up">jdid</span>`;
-  if (!k.rank && k.prev) return `<span class="down">tl3 mn top</span>`;
+  if (k.rank && !k.prev) return `<span class="up">${t("newRank")}</span>`;
+  if (!k.rank && k.prev) return `<span class="down">${t("dropped")}</span>`;
   const d = k.prev - k.rank;
   return d > 0 ? `<span class="up">▲ ${d}</span>` : d < 0 ? `<span class="down">▼ ${-d}</span>` : `<span class="muted">=</span>`;
 }
 function rankCell(k) {
-  if (!k.checked) return `<span class="muted">mazal</span>`;
-  return k.rank ? `<span class="rank">#${k.rank}</span>` : `<span class="muted">&gt; ${k.depth || "?"}</span>`;
+  if (!k.checked) return `<span class="muted">${t("notChecked")}</span>`;
+  return k.rank ? `<span class="rank">#${k.rank}</span>` : `<span class="muted" dir="ltr">&gt; ${k.depth || "?"}</span>`;
 }
 function fillCountrySelect(sel, withAll) {
   const v = sel.value;
-  sel.innerHTML = (withAll ? `<option value="">Kol l bldan</option>` : "") + S.config.countries.map(c => `<option value="${c}">${flag(c)} ${c.toUpperCase()}</option>`).join("");
+  sel.innerHTML = (withAll ? `<option value="">${t("allCountries")}</option>` : "") + S.config.countries.map(c => `<option value="${c}">${flag(c)} ${c.toUpperCase()}</option>`).join("");
   if (v && [...sel.options].some(o => o.value === v)) sel.value = v;
+}
+
+function applyI18n() {
+  document.documentElement.lang = LANG;
+  document.documentElement.dir = LANG === "ar" ? "rtl" : "ltr";
+  document.title = t("title");
+  document.querySelectorAll("[data-i18n]").forEach(el => el.innerHTML = t(el.dataset.i18n));
+  document.querySelectorAll("[data-i18n-ph]").forEach(el => el.placeholder = t(el.dataset.i18nPh));
+  document.querySelectorAll("[data-i18n-title]").forEach(el => { el.title = t(el.dataset.i18nTitle); el.setAttribute("aria-label", el.title); });
+  $("#langEn").classList.toggle("on", LANG === "en");
+  $("#langAr").classList.toggle("on", LANG === "ar");
+  $("#chartClose").innerHTML = ICONS.close;
+  $("#refreshAll").innerHTML = ICONS.refresh + `<span>${t("refreshAll")}</span>`;
+  const repo = esc(GH.repo().split("/")[1] || "");
+  $("#ghSteps").innerHTML = [t("s1", {link: `<a href="https://github.com/settings/personal-access-tokens/new" target="_blank" rel="noopener" dir="ltr">github.com/settings/personal-access-tokens/new</a>`}),
+    t("s2"), t("s3", {repo}), t("s4"), t("s5")].map(s => `<li>${s}</li>`).join("");
+  $("#ghSchedule").innerHTML = `${t("schedule")} ${ghLink(actionsUrl(), "seeRuns")}`;
+}
+function setLang(l) {
+  LANG = l; store.set("aso_lang", l);
+  $("#flash").classList.add("hidden");
+  applyI18n();
+  if (S) { renderAll(); renderStatus(S.status); }
 }
 
 async function loadState() {
   S = await api("/api/state");
-  if (!S) {
-    flash(`Mazal ma kayn data. Awel check khassha tkmel f GitHub Actions. <a href="${actionsUrl()}" target="_blank" rel="noopener">Chouf runs</a>`);
-    throw new Error("no data");
-  }
+  if (!S) { flash(t("noDataGh", {link: ghLink(actionsUrl(), "seeRunsShort")})); throw new Error("no data"); }
+}
+function renderHeader() {
   const cc = S.config.countries;
   const info = S.info[cc.find(c => S.info[c]) || cc[0]] || {};
   if (info.icon) $("#icon").src = info.icon;
   $("#icon").hidden = !info.icon;
-  $("#appname").textContent = info.name || "ASO Tracker";
-  $("#appsub").textContent = [info.subtitle, info.seller].filter(Boolean).join(" · ") + (S.last_run_at ? `  ·  akher check: ${S.last_run_at.replace("T", " ")}` : "  ·  mazal ma tdar ta check");
+  $("#appname").textContent = info.name || t("title");
+  const when = S.last_run_at ? t("lastCheck", {d: fmtDateTime(S.last_run_at)}) : t("noCheck");
+  const refreshed = S.last_refresh_at && S.last_refresh_at !== S.last_run_at ? " · " + t("lastRefresh", {d: fmtDateTime(S.last_refresh_at)}) : "";
+  $("#appsub").innerHTML = [info.subtitle, info.seller].filter(Boolean).map(esc).join(" · ") + `  ·  ${when}${refreshed}`;
+}
+function renderSettingsForm() {
+  const cc = S.config.countries;
   [["#infoCountry"], ["#kwCountry", 1], ["#cdCountry", 1], ["#anCountry"]].forEach(([s, a]) => fillCountrySelect($(s), a));
-  $("#addCountries").innerHTML = cc.map(c => `<label><input type="checkbox" value="${c}" checked> ${flag(c)} ${c.toUpperCase()}</label>`).join("");
-  $("#cfgApp").value = S.config.app_id; $("#cfgHour").value = S.config.daily_hour; $("#cfgCand").value = S.config.candidates_per_run;
-  $("#cfgCountries").value = cc.join(", "); $("#cfgKw").value = S.config.my_keywords;
-  $("#apiMode").innerHTML = S.api_mode === "blocked"
-    ? `⚠️ Apple bloquat search API mn had l internet. Tool kaychouf ghir <b>awel ~10 resultats</b> f kol keyword (tartib l7a9i9i dyal App Store). Ila khdmti b tool mn PC dyalk f dar, ghaliban ghaychouf 7ta <b>#200</b>.`
-    : S.api_mode === "ok" ? `✅ Search API khdama: tool kaychouf rank 7ta <b>#200</b>.` : `Mazal ma tdar ta check.`;
-  renderInfo(); renderCharts(); renderStatus(S.status);
+  const checked = new Set([...document.querySelectorAll("#addCountries input:checked")].map(i => i.value));
+  $("#addCountries").innerHTML = cc.map(c => `<label><input type="checkbox" value="${c}" ${!checked.size || checked.has(c) ? "checked" : ""}> ${flag(c)} ${c.toUpperCase()}</label>`).join("");
+  if (!$("#cfgApp").dataset.filled) {
+    $("#cfgApp").value = S.config.app_id; $("#cfgHour").value = S.config.daily_hour; $("#cfgCand").value = S.config.candidates_per_run;
+    $("#cfgCountries").value = cc.join(", "); $("#cfgKw").value = S.config.my_keywords; $("#cfgApp").dataset.filled = "1";
+  }
+  $("#apiMode").innerHTML = S.api_mode === "blocked" ? t("apiBlocked") : S.api_mode === "ok" ? t("apiOk") : t("apiNone");
 }
 
 function renderInfo() {
   const c = $("#infoCountry").value, i = S.info[c];
-  if (!i) { $("#infoKv").innerHTML = `<div class="muted">Mazal ma kayn data. Brek 3la "Check ranks daba".</div><div></div>`; $("#desc").textContent = ""; }
+  if (!i) { $("#infoKv").innerHTML = `<div class="muted">${t("noData")}</div><div></div>`; $("#desc").textContent = ""; }
   else {
-    const rows = [["Smiya", i.name], ["Subtitle", i.subtitle || "—"], ["Developer", i.seller], ["Rating", i.rating ? `⭐ ${i.rating.toFixed(2)} (${i.ratings} ratings)` : "Mazal ma kayn"],
-      ["Version", i.version], ["Akher update", (i.updated || "").slice(0, 10)], ["Tl3at f", (i.released || "").slice(0, 10)], ["Categories", (i.genres || []).filter((g, n, a) => a.indexOf(g) === n).join(", ")],
-      ["Size", i.size_mb + " MB"], ["iOS minimum", i.min_ios], ["Age", i.age], ["Thaman", i.price], ["Lughat", (i.languages || []).join(", ")], ["Lien", `<a href="${esc(i.url)}" target="_blank">App Store</a>`]];
-    $("#infoKv").innerHTML = rows.map(([k, v]) => `<div>${k}</div><div>${k === "Lien" ? v : esc(v)}</div>`).join("");
+    const rows = [["fName", esc(i.name)], ["fSubtitle", esc(i.subtitle || "—")], ["fDeveloper", esc(i.seller)],
+      ["fRating", i.rating ? `⭐ ${i.rating.toFixed(2)} (${t("ratingsN", {n: num(i.ratings)})})` : t("noRating")],
+      ["fVersion", esc(i.version)], ["fUpdated", fmtDate(i.updated)], ["fReleased", fmtDate(i.released)],
+      ["fCategories", esc((i.genres || []).filter((g, n, a) => a.indexOf(g) === n).join(", "))],
+      ["fSize", `<span dir="ltr">${i.size_mb} MB</span>`], ["fMinIos", esc(i.min_ios)], ["fAge", esc(i.age)], ["fPrice", esc(i.price)],
+      ["fLanguages", esc((i.languages || []).join(", "))], ["fLink", `<a href="${esc(i.url)}" target="_blank" rel="noopener">App Store</a>`]];
+    $("#infoKv").innerHTML = rows.map(([k, v]) => `<div>${t(k)}</div><div>${v}</div>`).join("");
     $("#desc").textContent = i.description;
   }
-  $("#ratingsTable").innerHTML = `<tr><th>Bled</th><th>Rating</th><th>Ratings</th><th>Version</th></tr>` + S.config.countries.map(cc => {
+  $("#ratingsTable").innerHTML = `<tr><th>${t("country")}</th><th>${t("rating")}</th><th>${t("ratings")}</th><th>${t("version")}</th></tr>` + S.config.countries.map(cc => {
     const x = S.info[cc];
-    return `<tr><td>${flag(cc)} ${cc.toUpperCase()}</td><td>${x && x.rating ? "⭐ " + x.rating.toFixed(2) : "—"}</td><td>${x ? x.ratings ?? 0 : "—"}</td><td>${x ? esc(x.version) : "—"}</td></tr>`;
+    return `<tr><td>${flag(cc)} ${cc.toUpperCase()}</td><td>${x && x.rating ? "⭐ " + x.rating.toFixed(2) : "—"}</td><td>${x ? num(x.ratings) : "—"}</td><td>${x ? esc(x.version) : "—"}</td></tr>`;
   }).join("");
 }
 
 function renderStats() {
   const ranked = KW.filter(k => k.rank), top10 = ranked.filter(k => k.rank <= 10), top3 = ranked.filter(k => k.rank <= 3);
-  const ups = KW.filter(k => k.rank && k.prev && k.rank < k.prev).length, downs = KW.filter(k => (k.prev && (!k.rank || k.rank > k.prev))).length;
+  const ups = KW.filter(k => k.rank && k.prev && k.rank < k.prev).length, downs = KW.filter(k => k.prev && (!k.rank || k.rank > k.prev)).length;
   const auto = KW.filter(k => k.source === "auto").length;
   const bestChart = S.charts.filter(c => c.rank).sort((a, b) => a.rank - b.rank)[0];
-  const st = [[KW.length, "Keywords kantba3o"], [ranked.length, "Ranké fihom"], [top3.length, "F top 3"], [top10.length, "F top 10"],
-    [`<span class="up">${ups}</span> / <span class="down">${downs}</span>`, "Tl3o / hbto lyoum"], [auto, "Tl9aw automatiquement"],
-    [bestChart ? `#${bestChart.rank}` : "—", bestChart ? `Top chart: ${S.genre_names[bestChart.genre] || bestChart.genre} ${bestChart.country.toUpperCase()}` : "Top charts: machi f top 100"]];
+  const st = [[num(KW.length), t("kwTracked")], [num(ranked.length), t("ranked")], [num(top3.length), t("top3")], [num(top10.length), t("top10")],
+    [`<span class="up">${ups}</span> / <span class="down">${downs}</span>`, t("upDown")], [num(auto), t("autoFound")],
+    [bestChart ? `#${bestChart.rank}` : "—", bestChart ? t("bestChart", {g: esc(S.genre_names[bestChart.genre] || bestChart.genre), c: bestChart.country.toUpperCase()}) : t("notInCharts")]];
   $("#stats").innerHTML = st.map(([v, l]) => `<div class="stat"><div class="v">${v}</div><div class="l">${l}</div></div>`).join("");
 }
 
 let kwSort = {key: "rank", dir: 1};
 function renderKeywords() {
   const c = $("#kwCountry").value, src = $("#kwSource").value, rk = $("#kwRanked").value, q = $("#kwSearch").value.toLowerCase();
-  let rows = KW.filter(k => (!c || k.country === c) && (!src || k.source === src) && (rk === "" || !!k.rank === (rk === "1")) && (!q || k.term.includes(q)));
+  const rows = KW.filter(k => (!c || k.country === c) && (!src || k.source === src) && (rk === "" || !!k.rank === (rk === "1")) && (!q || k.term.includes(q)));
   const val = k => kwSort.key === "rank" ? (k.rank || 9999) : kwSort.key === "best" ? (k.best || 9999) : kwSort.key === "change" ? -((k.prev || 999) - (k.rank || 999)) : k[kwSort.key];
   rows.sort((a, b) => (val(a) > val(b) ? 1 : val(a) < val(b) ? -1 : 0) * kwSort.dir);
   const th = (k, l) => `<th data-sort="${k}">${l}${kwSort.key === k ? (kwSort.dir > 0 ? " ↑" : " ↓") : ""}</th>`;
-  $("#kwTable").innerHTML = `<tr>${th("term", "Keyword")}${th("country", "Bled")}${th("rank", "Rank lyoum")}${th("change", "Tbdil")}${th("best", "A7san rank")}<th>30 yom</th>${th("source", "Source")}<th></th></tr>` +
-    (rows.length ? rows.map(k => `<tr class="click" data-id="${k.id}"><td>${esc(k.term)}</td><td>${flag(k.country)} ${k.country.toUpperCase()}</td><td>${rankCell(k)}</td><td>${delta(k)}</td><td>${k.best ? "#" + k.best : "—"}</td><td>${spark(k.history)}</td><td><span class="badge ${k.source}">${k.source === "auto" ? "auto" : "nta"}</span></td><td><button class="small" data-del="${k.id}">7ayed</button></td></tr>`).join("")
-      : `<tr><td colspan="8" class="muted">Ma kayn ta keyword. Zid keywords lfo9 wla brek 3la "Check + Discovery".</td></tr>`);
+  const busy = id => refreshing.has(id) || refreshQueue.has(id);
+  $("#kwTable").innerHTML = `<tr>${th("term", t("keyword"))}${th("country", t("country"))}${th("rank", t("rankToday"))}${th("change", t("change"))}${th("best", t("best"))}<th>${t("last30")}</th>${th("source", t("source"))}<th>${t("actions")}</th></tr>` +
+    (rows.length ? rows.map(k => `<tr class="click${busy(k.id) ? " busy" : ""}" data-id="${k.id}">
+      <td dir="auto">${esc(k.term)}</td><td>${flag(k.country)} ${k.country.toUpperCase()}</td><td>${rankCell(k)}</td><td>${delta(k)}</td>
+      <td>${k.best ? "#" + k.best : "—"}</td><td>${spark(k.history)}</td>
+      <td><span class="badge ${k.source}">${k.source === "auto" ? t("badgeAuto") : t("badgeYou")}</span></td>
+      <td><span class="row-actions">
+        <button class="icon-btn${busy(k.id) ? " spin" : ""}" data-refresh="${k.id}" title="${t("refreshKw")}" aria-label="${t("refreshKw")}" ${busy(k.id) ? "disabled" : ""}>${ICONS.refresh}</button>
+        <button class="icon-btn" data-chart="${k.id}" title="${t("chartKw")}" aria-label="${t("chartKw")}">${ICONS.chart}</button>
+        <button class="icon-btn danger" data-del="${k.id}" title="${t("del")}" aria-label="${t("del")}">${ICONS.trash}</button>
+      </span></td></tr>`).join("")
+      : `<tr><td colspan="8" class="muted">${t("emptyKw")}</td></tr>`);
+  $("#refreshAll").disabled = refreshBusy && !KW.some(k => !busy(k.id));
+  $("#refreshAll").classList.toggle("spin", refreshBusy);
 }
 
 async function showSerp(id) {
   const k = KW.find(x => x.id == id), d = await api("/api/serp?id=" + id);
   const me = S.config.app_id;
   $("#serpCard").classList.remove("hidden");
-  $("#serpTitle").innerHTML = `Top 10 f "${esc(k.term)}" ${flag(k.country)} <span class="muted">(${d.date || "—"})</span>`;
-  $("#serpTable").innerHTML = `<tr><th>#</th><th>App</th><th>Ratings</th></tr>` + d.apps.map(a => `<tr class="${a.app_id === me ? "me" : ""}"><td>${a.pos}</td><td><a href="https://apps.apple.com/${k.country}/app/id${a.app_id}" target="_blank">${esc(a.name || a.app_id)}</a></td><td>${a.ratings ?? "—"}</td></tr>`).join("");
+  $("#serpTitle").innerHTML = `${t("serpTitle", {k: bdi(k.term)})} ${flag(k.country)} <span class="muted">(${fmtDate(d.date) || "—"})</span>`;
+  $("#serpTable").innerHTML = `<tr><th>#</th><th>${t("app")}</th><th>${t("ratings")}</th></tr>` + d.apps.map(a => `<tr class="${a.app_id === me ? "me" : ""}"><td>${a.pos}</td><td dir="auto"><a href="https://apps.apple.com/${k.country}/app/id${a.app_id}" target="_blank" rel="noopener">${esc(a.name || a.app_id)}</a></td><td>${a.ratings == null ? "—" : num(a.ratings)}</td></tr>`).join("");
   $("#serpCard").scrollIntoView({behavior: "smooth"});
 }
 
 function renderCandidates() {
   const c = $("#cdCountry").value, r = $("#cdRanked").value;
   const rows = CD.filter(x => (!c || x.country === c) && (r === "" || !!x.rank === (r === "1")));
-  $("#cdTable").innerHTML = `<tr><th>Keyword</th><th>Bled</th><th>Natija</th><th>Mnin jat</th><th>Ttesta f</th></tr>` +
-    (rows.length ? rows.map(x => `<tr><td>${esc(x.term)}</td><td>${flag(x.country)} ${x.country.toUpperCase()}</td><td>${x.rank ? `<span class="rank up">✅ #${x.rank}</span>` : `<span class="muted">machi ranké</span>`}</td><td class="muted">${esc(x.origin)}</td><td class="muted">${x.tested_at}</td></tr>`).join("")
-      : `<tr><td colspan="5" class="muted">Mazal ma ttesta 7ta keyword. Brek 3la "Check + Discovery".</td></tr>`);
+  $("#cdTable").innerHTML = `<tr><th>${t("keyword")}</th><th>${t("country")}</th><th>${t("result")}</th><th>${t("origin")}</th><th>${t("tested")}</th></tr>` +
+    (rows.length ? rows.map(x => `<tr><td dir="auto">${esc(x.term)}</td><td>${flag(x.country)} ${x.country.toUpperCase()}</td><td>${x.rank ? `<span class="rank up">✅ #${x.rank}</span>` : `<span class="muted">${t("notRanking")}</span>`}</td><td class="muted">${esc(originLabel(x.origin))}</td><td class="muted">${fmtDate(x.tested_at)}</td></tr>`).join("")
+      : `<tr><td colspan="5" class="muted">${t("emptyCd")}</td></tr>`);
 }
 
 async function renderAnalysis() {
   const c = $("#anCountry").value; if (!c) return;
   const d = await api("/api/analysis?country=" + c);
   const ck = b => b ? `<span class="yes">✔</span>` : `<span class="no">✗</span>`;
-  $("#anTable").innerHTML = `<tr><th>Kalma</th><th>Ch7al mn concurrent</th><th>F smiya/subtitle dyalk</th><th>F keywords dyalk</th><th>F description</th><th>Rank dyalk</th><th>Nasi7a</th></tr>` +
+  $("#anTable").innerHTML = `<tr><th>${t("word")}</th><th>${t("competitorsN")}</th><th>${t("inTitle")}</th><th>${t("inKeywords")}</th><th>${t("inDesc")}</th><th>${t("yourRank")}</th><th>${t("tip")}</th></tr>` +
     (d.words.length ? d.words.map(w => {
-      const tip = w.trademark ? `<span class="down">⚠️ marque, ma tzidhach</span>` : w.in_title ? `<span class="muted">mzyan</span>` : w.in_keywords ? `<span class="muted">kayna f keywords</span>` : `<b class="up">zidha</b>`;
-      return `<tr><td><b>${esc(w.word)}</b></td><td>${w.count}</td><td>${ck(w.in_title)}</td><td>${ck(w.in_keywords)}</td><td>${ck(w.in_description)}</td><td>${w.rank ? "#" + w.rank : "—"}</td><td>${tip}</td></tr>`;
-    }).join("") : `<tr><td colspan="7" class="muted">Mazal ma kayn data. Zid keywords o dir check.</td></tr>`);
+      const tip = w.trademark ? `<span class="down">${t("tipTrademark")}</span>` : w.in_title ? `<span class="muted">${t("tipGood")}</span>` : w.in_keywords ? `<span class="muted">${t("tipInKw")}</span>` : `<b class="up">${t("tipAdd")}</b>`;
+      return `<tr><td dir="auto"><b>${esc(w.word)}</b></td><td>${w.count}</td><td>${ck(w.in_title)}</td><td>${ck(w.in_keywords)}</td><td>${ck(w.in_description)}</td><td>${w.rank ? "#" + w.rank : "—"}</td><td>${tip}</td></tr>`;
+    }).join("") : `<tr><td colspan="7" class="muted">${t("emptyAn")}</td></tr>`);
 }
 
 function renderCharts() {
-  const latest = {};
-  S.charts.forEach(c => { latest[c.country + "|" + c.genre] = c; });
-  const best = {};
-  S.charts.forEach(c => { const k = c.country + "|" + c.genre; if (c.rank && (!best[k] || c.rank < best[k])) best[k] = c.rank; });
+  const latest = {}, best = {};
+  S.charts.forEach(c => {
+    const k = c.country + "|" + c.genre;
+    latest[k] = c;
+    if (c.rank && (!best[k] || c.rank < best[k])) best[k] = c.rank;
+  });
   const rows = Object.values(latest).sort((a, b) => a.country.localeCompare(b.country) || a.genre.localeCompare(b.genre));
-  $("#chTable").innerHTML = `<tr><th>Bled</th><th>Category</th><th>Rank lyoum</th><th>A7san rank</th><th>Date</th></tr>` +
-    (rows.length ? rows.map(c => `<tr><td>${flag(c.country)} ${c.country.toUpperCase()}</td><td>${esc(S.genre_names[c.genre] || c.genre)}</td><td>${c.rank ? `<span class="rank">#${c.rank}</span>` : `<span class="muted">machi f top 100</span>`}</td><td>${best[c.country + "|" + c.genre] ? "#" + best[c.country + "|" + c.genre] : "—"}</td><td class="muted">${c.date}</td></tr>`).join("")
-      : `<tr><td colspan="5" class="muted">Mazal ma kayn data.</td></tr>`);
+  $("#chTable").innerHTML = `<tr><th>${t("country")}</th><th>${t("category")}</th><th>${t("rankToday")}</th><th>${t("best")}</th><th>${t("date")}</th></tr>` +
+    (rows.length ? rows.map(c => `<tr><td>${flag(c.country)} ${c.country.toUpperCase()}</td><td>${esc(S.genre_names[c.genre] || c.genre)}</td><td>${c.rank ? `<span class="rank">#${c.rank}</span>` : `<span class="muted">${t("notTop100")}</span>`}</td><td>${best[c.country + "|" + c.genre] ? "#" + best[c.country + "|" + c.genre] : "—"}</td><td class="muted">${fmtDate(c.date)}</td></tr>`).join("")
+      : `<tr><td colspan="5" class="muted">${t("noData")}</td></tr>`);
 }
 
 function renderStatus(st) {
   $("#statusCard").classList.toggle("hidden", !LOCAL || (!st.running && !st.log.length));
-  $("#stStep").textContent = st.error ? "Error: " + st.error : st.step;
+  $("#stStep").innerHTML = st.error ? t("stError", {m: esc(st.error)}) : stepLabel(st.step);
   $("#stCount").textContent = st.total ? `${st.done} / ${st.total}` : "";
   $("#stBar").style.width = st.total ? Math.min(100, st.done / st.total * 100) + "%" : "0";
   $("#stLog").textContent = st.log.slice().reverse().join("\n");
-  $("#runQuick").disabled = $("#runFull").disabled = st.running;
+  $("#runFull").disabled = st.running;
+}
+
+function renderAll() {
+  renderHeader(); renderSettingsForm(); renderInfo(); renderCharts(); renderStats(); renderKeywords(); renderCandidates();
+  if (tab === "analysis") renderAnalysis();
+  if (openChartId != null) showChart(openChartId);
 }
 
 async function loadAll() {
+  staticCache = {};
   await loadState();
   [KW, CD] = await Promise.all([api("/api/keywords"), api("/api/candidates")]);
-  renderStats(); renderKeywords(); renderCandidates();
-  if (tab === "analysis") renderAnalysis();
+  renderAll();
+  renderStatus(S.status);
 }
 
-let polling = false;
-async function poll() {
-  if (polling) return; polling = true;
+// ---------------------------------------------------------------- rank history chart
+let openChartId = null, chartShowTable = false;
+function niceMax(v) { for (const m of [10, 20, 50, 100, 150, 200, 250]) if (v <= m) return m; return Math.ceil(v / 50) * 50; }
+function showChart(id) {
+  const k = KW.find(x => x.id == id);
+  if (!k) return closeChart();
+  openChartId = k.id;
+  const h = k.history || [];
+  const ranked = h.filter(p => p.rank);
+  $("#chartTitle").innerHTML = `${t("historyTitle", {k: bdi(k.term)})} ${flag(k.country)}`;
+  const avg = ranked.length ? (ranked.reduce((s, p) => s + p.rank, 0) / ranked.length) : null;
+  $("#chartStats").innerHTML = [[t("today"), rankCell(k)], [t("best"), k.best ? "#" + k.best : "—"],
+    [t("avg"), avg ? "#" + avg.toFixed(1) : "—"], [t("daysTracked"), num(h.length)]]
+    .map(([l, v]) => `<div><b>${v}</b><span>${l}</span></div>`).join("");
+  $("#chartModal").classList.remove("hidden");
+  $("#chartBox").innerHTML = rankChartSvg(h, Math.max(300, $("#chartBox").clientWidth || 680));
+  $("#chartNote").textContent = h.length <= 1 ? t("oneCheck") : "";
+  $("#chartTableBtn").textContent = chartShowTable ? t("hideTable") : t("showTable");
+  $("#chartTableWrap").classList.toggle("hidden", !chartShowTable);
+  $("#chartTable").innerHTML = `<tr><th>${t("date")}</th><th>${t("rankF")}</th></tr>` + h.slice().reverse().map(p =>
+    `<tr><td>${fmtDate(p.date)}</td><td>${p.rank ? `<span class="rank">#${p.rank}</span>` : `<span class="muted">${t("notInTop", {n: p.depth || "?"})}</span>`}</td></tr>`).join("");
+  bindChartHover(h);
+}
+function closeChart() {
+  openChartId = null;
+  $("#chartModal").classList.add("hidden");
+}
+// rank 1 lfo9. Iyam li ma kanch fihom app f resultats kaybano f "lane" lta7t.
+let CH = null;
+function rankChartSvg(h, W) {
+  const H = W < 500 ? 240 : 280, m = {l: 52, r: 18, t: 14, b: 30}, lane = 26;
+  const plotB = H - m.b - lane, laneY = H - m.b - lane / 2 + 2;
+  const ranked = h.filter(p => p.rank);
+  const yMax = niceMax(Math.max(10, ...ranked.map(p => p.rank)));
+  const y = r => m.t + (r - 1) / (yMax - 1) * (plotB - m.t);
+  const times = h.map(p => Date.parse(p.date + "T12:00:00"));
+  const t0 = Math.min(...times), t1 = Math.max(...times);
+  const x = tm => t1 === t0 ? (m.l + W - m.r) / 2 : m.l + (tm - t0) / (t1 - t0) * (W - m.l - m.r);
+  const step = yMax / 5;
+  const ticks = [1, ...Array.from({length: 5}, (_, i) => Math.round((i + 1) * step))];
+  let s = `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="${esc(t("chartKw"))}">`;
+  ticks.forEach(v => { s += `<line x1="${m.l}" x2="${W - m.r}" y1="${y(v)}" y2="${y(v)}" stroke="var(--grid)" stroke-width="1"/><text x="${m.l - 8}" y="${y(v) + 4}" text-anchor="end">#${v}</text>`; });
+  s += `<line x1="${m.l}" x2="${W - m.r}" y1="${laneY}" y2="${laneY}" stroke="var(--grid)" stroke-dasharray="3 4"/>`;
+  s += `<text x="${m.l - 8}" y="${laneY + 4}" text-anchor="end">${esc(t("notRankedLane"))}</text>`;
+  // x labels: mn lekher l lwel, b masafa kafya bach ma ytrakboch (akher nhar dima kayban)
+  const n = h.length, gap = 76;
+  let lastX = Infinity;
+  for (let i = n - 1; i >= 0; i--) {
+    const px = x(times[i]);
+    if (lastX - px < gap) continue;
+    const anchor = i === n - 1 && n > 1 ? "end" : i === 0 && n > 1 ? "start" : "middle";
+    s += `<text x="${px}" y="${H - 8}" text-anchor="${anchor}">${esc(fmtDate(h[i].date, {day: "numeric", month: "short"}))}</text>`;
+    lastX = px;
+  }
+  // line: kat t9te3 f iyam bla rank
+  let d = "", open = false;
+  h.forEach((p, i) => {
+    if (p.rank) { d += `${open ? "L" : "M"}${x(times[i]).toFixed(1)} ${y(p.rank).toFixed(1)} `; open = true; } else open = false;
+  });
+  if (d) s += `<path d="${d}" fill="none" stroke="var(--accent)" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>`;
+  h.forEach((p, i) => {
+    const last = i === n - 1;
+    s += p.rank
+      ? `<circle cx="${x(times[i])}" cy="${y(p.rank)}" r="${last ? 5.5 : 4}" fill="var(--accent)" stroke="var(--card)" stroke-width="2"/>`
+      : `<circle cx="${x(times[i])}" cy="${laneY}" r="4" fill="var(--card)" stroke="var(--muted)" stroke-width="1.5"/>`;
+  });
+  if (n && h[n - 1].rank) s += `<text x="${x(times[n - 1]) + (n > 1 ? -10 : 10)}" y="${y(h[n - 1].rank) - 10}" text-anchor="${n > 1 ? "end" : "start"}" style="fill:var(--text);font-weight:600">#${h[n - 1].rank}</text>`;
+  s += `<line id="chCross" x1="0" x2="0" y1="${m.t}" y2="${H - m.b}" stroke="var(--muted)" stroke-width="1" visibility="hidden"/>`;
+  s += `<rect id="chHit" x="${m.l - 10}" y="0" width="${W - m.l - m.r + 20}" height="${H - m.b}" fill="transparent"/>`;
+  s += `</svg><div class="tip hidden" id="chTip"></div>`;
+  CH = {W, H, xs: times.map(x), ys: h.map(p => p.rank ? y(p.rank) : laneY)};
+  return s;
+}
+function bindChartHover(h) {
+  const svg = $("#chartBox svg"), hit = $("#chHit"), tip = $("#chTip"), cross = $("#chCross");
+  if (!svg || !h.length) return;
+  const move = e => {
+    const r = svg.getBoundingClientRect(), scale = r.width / CH.W;
+    const px = (e.clientX - r.left) / scale;
+    let i = 0; CH.xs.forEach((v, j) => { if (Math.abs(v - px) < Math.abs(CH.xs[i] - px)) i = j; });
+    const p = h[i];
+    cross.setAttribute("x1", CH.xs[i]); cross.setAttribute("x2", CH.xs[i]); cross.setAttribute("visibility", "visible");
+    tip.innerHTML = `${esc(fmtDate(p.date))}<br><b>${p.rank ? t("rankLabel", {n: p.rank}) : t("notInTop", {n: p.depth || "?"})}</b>`;
+    tip.style.left = CH.xs[i] * scale + "px"; tip.style.top = CH.ys[i] * scale + "px";
+    tip.classList.remove("hidden");
+  };
+  hit.addEventListener("pointermove", move);
+  hit.addEventListener("pointerdown", move);
+  hit.addEventListener("pointerleave", () => { tip.classList.add("hidden"); cross.setAttribute("visibility", "hidden"); });
+}
+
+// ---------------------------------------------------------------- refresh dyal keywords
+// Refresh wa7d f nefs l w9t: li tbrek 3lihom f had l w9t kaytzado l queue o kaytdaro mn ba3d.
+const refreshing = new Set(), refreshQueue = new Set();
+let refreshBusy = false;
+function refreshKeywords(ids) {
+  ids.forEach(id => { if (!refreshing.has(id)) refreshQueue.add(id); });
+  renderKeywords();
+  pumpRefresh();
+}
+async function pumpRefresh() {
+  if (refreshBusy || !refreshQueue.size) return;
+  refreshBusy = true;
+  const ids = [...refreshQueue];
+  refreshQueue.clear(); ids.forEach(i => refreshing.add(i));
+  renderKeywords();
+  try {
+    if (LOCAL) {
+      let r = await api("/api/refresh", {ids});
+      while (r.busy) { await sleep(3000); r = await api("/api/refresh", {ids}); }
+      await pollLocal();
+    } else {
+      const spec = ids.length === KW.length ? "all" : KW.filter(k => ids.includes(k.id)).map(k => `${k.term}|${k.country}`).join(";");
+      flash(t("ghKwWorking", {n: ids.length, link: ghLink()}));
+      await ghWaitRun({dispatch: {discover: "false", keywords: spec}, event: "workflow_dispatch"});
+    }
+    await loadAll();
+    flash(t("refreshDone", {n: ids.length}), "ok");
+  } catch (e) {
+    flash(e.message, "bad");
+  } finally {
+    ids.forEach(i => refreshing.delete(i));
+    refreshBusy = false;
+    renderKeywords();
+    pumpRefresh();
+  }
+}
+async function pollLocal() {
   while (true) {
     const s = await api("/api/state");
     renderStatus(s.status);
-    if (!s.status.running) break;
-    await new Promise(r => setTimeout(r, 1500));
+    if (!s.status.running) return;
+    await sleep(1500);
   }
-  polling = false; loadAll();
 }
 
+// ---------------------------------------------------------------- events
+const act = fn => async e => { try { await fn(e); } catch (err) { flash(err.message, "bad"); } };
+$("#langEn").onclick = () => setLang("en");
+$("#langAr").onclick = () => setLang("ar");
 $("#tabs").onclick = e => {
-  const t = e.target.dataset.tab; if (!t) return;
-  tab = t;
-  document.querySelectorAll("#tabs button").forEach(b => b.classList.toggle("on", b.dataset.tab === t));
-  document.querySelectorAll("section").forEach(s => s.classList.toggle("hidden", s.id !== "tab-" + t));
-  if (t === "analysis") renderAnalysis();
+  const tb = e.target.dataset.tab; if (!tb) return;
+  tab = tb;
+  document.querySelectorAll("#tabs button").forEach(b => b.classList.toggle("on", b.dataset.tab === tb));
+  document.querySelectorAll("section").forEach(s => s.classList.toggle("hidden", s.id !== "tab-" + tb));
+  if (tb === "analysis") renderAnalysis();
 };
-// kol action: ila w9e3 error (token, GitHub...) kayban f flash
-const act = fn => async e => { try { await fn(e); } catch (err) { flash(esc(err.message), true); } };
-const run = discover => act(async () => {
-  const r = await api("/api/run", {discover});
-  if (r.github) flash(GH_WAIT); else poll();
+$("#runFull").onclick = act(async () => {
+  if (LOCAL) { await api("/api/run", {discover: true}); await pollLocal(); await loadAll(); return; }
+  $("#runFull").disabled = true;
+  try {
+    flash(t("ghWorking", {link: ghLink()}));
+    await ghWaitRun({dispatch: {discover: "true", keywords: ""}, event: "workflow_dispatch"});
+    await loadAll(); flash(t("runDone"), "ok");
+  } finally { $("#runFull").disabled = false; }
 });
-$("#runQuick").onclick = run(false);
-$("#runFull").onclick = run(true);
+$("#refreshAll").onclick = () => refreshKeywords(KW.map(k => k.id));
 $("#infoCountry").onchange = renderInfo;
 ["#kwCountry", "#kwSource", "#kwRanked"].forEach(s => $(s).onchange = renderKeywords);
 $("#kwSearch").oninput = renderKeywords;
 ["#cdCountry", "#cdRanked"].forEach(s => $(s).onchange = renderCandidates);
 $("#anCountry").onchange = renderAnalysis;
 $("#kwTable").onclick = act(async e => {
-  const del = e.target.dataset.del;
-  if (del) {
+  const btn = e.target.closest("button");
+  if (btn?.dataset.refresh) { e.stopPropagation(); return refreshKeywords([+btn.dataset.refresh]); }
+  if (btn?.dataset.chart) { e.stopPropagation(); chartShowTable = false; return showChart(+btn.dataset.chart); }
+  if (btn?.dataset.del) {
     e.stopPropagation();
-    if (!confirm("Bghiti t7ayed had keyword?")) return;
-    const r = await api("/api/keywords/delete", {ids: [+del]});
-    if (r.github) { KW = KW.filter(k => k.id !== +del); renderKeywords(); renderStats(); flash("T7ayed mn config f GitHub ✔. " + GH_WAIT); }
+    if (!confirm(t("confirmDelete"))) return;
+    const id = +btn.dataset.del;
+    const r = await api("/api/keywords/delete", {ids: [id]});
+    if (r.github) { KW = KW.filter(k => k.id !== id); renderKeywords(); renderStats(); flash(t("savedGh"), "ok"); }
     else loadAll();
     return;
   }
@@ -518,28 +936,59 @@ $("#addBtn").onclick = act(async () => {
   if (!$("#newTerms").value.trim() || !countries.length) return;
   const r = await api("/api/keywords", {terms: $("#newTerms").value, countries});
   $("#newTerms").value = "";
-  if (r.github) { $("#addMsg").textContent = `Tzadou ${r.added} f config ✔`; flash(GH_WAIT); }
-  else { $("#addMsg").textContent = `Tzadou ${r.added}. Brek 3la "Check ranks daba" bach tchouf rank dyalhom.`; loadAll(); }
+  if (!r.github) {
+    $("#addMsg").textContent = t("addedLocal", {n: r.added});
+    await loadAll();
+    // local: refresh dyal keywords jdad (li mazal ma tchekawch)
+    return refreshKeywords(KW.filter(k => !k.checked).map(k => k.id));
+  }
+  // GitHub: commit dyal config kaybda check wa7do (push); ntsennawh o n7ddtho data
+  $("#addMsg").textContent = t("addedGh", {n: r.added});
+  flash(t("ghWorking", {link: ghLink()}));
+  await ghWaitRun({event: "push"});
+  await loadAll(); flash(t("runDone"), "ok");
 });
 $("#saveCfg").onclick = act(async () => {
   const r = await api("/api/config", {app_id: $("#cfgApp").value.trim(), daily_hour: $("#cfgHour").value, candidates_per_run: $("#cfgCand").value, countries: $("#cfgCountries").value, my_keywords: $("#cfgKw").value});
-  $("#cfgMsg").textContent = "Tsjjel ✔";
-  if (r.github) flash("Settings tsjjlo f GitHub ✔. " + GH_WAIT); else loadAll();
+  $("#cfgMsg").textContent = t("saved");
+  $("#cfgApp").dataset.filled = "";
+  if (!r.github) return loadAll();
+  flash(t("savedGh") + " " + ghLink(), "ok");
+  await ghWaitRun({event: "push"});
+  await loadAll(); flash(t("runDone"), "ok");
 });
 $("#ghSave").onclick = () => {
   store.set("aso_repo", $("#ghRepo").value.trim()); store.set("aso_token", $("#ghToken").value.trim());
-  $("#ghMsg").textContent = GH.token() ? "Tsjjel f had browser ✔" : "Token t7ayed";
-  ghRunStatus();
+  $("#ghMsg").textContent = GH.token() ? t("tokenSaved") : t("tokenRemoved");
+  applyI18n(); ghRunStatus();
 };
+$("#chartClose").onclick = closeChart;
+$("#chartModal").onclick = e => { if (e.target.id === "chartModal") closeChart(); };
+document.addEventListener("keydown", e => { if (e.key === "Escape" && openChartId != null) closeChart(); });
+let resizeTimer;
+window.addEventListener("resize", () => { clearTimeout(resizeTimer); resizeTimer = setTimeout(() => { if (openChartId != null) showChart(openChartId); }, 150); });
+$("#chartTableBtn").onclick = () => { chartShowTable = !chartShowTable; showChart(openChartId); };
+
+async function ghRunStatus() {
+  if (LOCAL || !GH.token()) return;
+  try {
+    const r = await ghApi("/actions/runs?per_page=1");
+    const run = r.workflow_runs?.[0];
+    if (run && run.status !== "completed") flash(t("runRunning", {s: esc(run.status), link: ghLink(run.html_url)}));
+    else if (run && run.conclusion === "failure") flash(t("runFailed", {link: ghLink(run.html_url, "seeError")}), "bad");
+  } catch (e) { flash(e.message, "bad"); }
+}
+
 if (!LOCAL) {
   $("#ghCard").classList.remove("hidden");
   $("#cfgHourWrap").classList.add("hidden");
   $("#ghRepo").value = GH.repo(); $("#ghToken").value = GH.token();
-  $("#ghRepoName").textContent = GH.repo().split("/")[1];
-  $("#ghActions").href = actionsUrl();
 }
-
-loadAll().then(() => { if (LOCAL && S.status.running) poll(); ghRunStatus(); });
+applyI18n();
+loadAll().then(() => {
+  if (LOCAL && S.status.running) pollLocal().then(loadAll);
+  ghRunStatus();
+}).catch(() => {});
 </script>
 </body>
 </html>
