@@ -15,6 +15,7 @@ import math
 import os
 import re
 import sqlite3
+import subprocess
 import threading
 import time
 import traceback
@@ -34,6 +35,30 @@ REQUEST_DELAY = 1.2  # tsenna bin kol request o lakhor bach ma nt9elch 3la Apple
 MAX_DELAY = 4.0      # ila Apple galt 429, delay kaytzad 7ta had l7ed
 RETEST_DAYS = 7      # keyword li ma ranké fih ghayt3awed ytesta mn ba3d had l iyam
 HARD_LIMIT_MIN = 75  # 7ed a9sa l run wa7d (GitHub kay7bes job f 90 d9i9a)
+CHECKPOINT_MIN = 10  # sauvegarde f nos run (ila t7bes run, li jay kaykmmel mn hna)
+
+
+def checkpoint():
+    """Kaysjjel data f nos run: export + script li f ASO_CHECKPOINT (f GitHub: push l branch data)."""
+    script = os.environ.get("ASO_CHECKPOINT")
+    if not script:
+        return
+    try:
+        export_static()
+        subprocess.run(["bash", script], check=True, timeout=300)
+        log("Checkpoint saved.")
+    except Exception as e:
+        log(f"Checkpoint failed: {e}")
+
+
+_last_checkpoint = 0.0
+
+
+def maybe_checkpoint():
+    global _last_checkpoint
+    if time.time() - _last_checkpoint > CHECKPOINT_MIN * 60:
+        checkpoint()
+        _last_checkpoint = time.time()
 
 DEFAULT_CONFIG = {
     "app_id": "6447526912",
@@ -813,6 +838,8 @@ def run_job(discover=True, only_country=None, keyword_ids=None, hourly=False):
     if not _job_lock.acquire(blocking=False):
         return False
     started = time.time()
+    global _last_checkpoint
+    _last_checkpoint = started
     try:
         STATUS.update(running=True, error="", done=0, total=0, log=[])
         cfg = load_config()
@@ -895,6 +922,7 @@ def run_job(discover=True, only_country=None, keyword_ids=None, hourly=False):
             if time.time() > hard_deadline:
                 log(f"Time limit: {len(kws) - i} tracked keywords left, the next run continues.")
                 break
+            maybe_checkpoint()
             STATUS["step"] = f"keyword:{k['term']}|{k['country'].upper()}"
             try:
                 rank, depth, method, top_ids, subs = check_rank(k["term"], k["country"], app_id)
@@ -940,7 +968,7 @@ def run_job(discover=True, only_country=None, keyword_ids=None, hourly=False):
 
         # 6. discovery: keywords jdad (ideas + pool), bled b bled 7ta ykmel budget d w9t
         found = tested = 0
-        queues = {}
+        queues, seen_terms = {}, {}
         if discover and not keywords_only:
             for cc in countries:
                 # VIP (suggestions dyal Apple) lwlin, mn ba3d ideas, mn ba3d pool
@@ -948,13 +976,20 @@ def run_job(discover=True, only_country=None, keyword_ids=None, hourly=False):
                 q += [x for x in generate_candidates(cc, cfg)[:n_cand] if x[0] not in {t for t, _ in q}]
                 # pool_per_run = 0 ➜ bla 7ad (budget d w9t howa li kay7bes)
                 q += pool_candidates(cc, cfg, n_pool if n_pool else 100000, {t for t, _ in q})
+                with db() as con:
+                    seen = {r["term"] for r in con.execute("SELECT term FROM candidates WHERE country=?", (cc,))}
+                # keywords jdad (3mmrhom ma ttestaw) dima 9bel li kayt3awdo, o kol wa7d b tartib dyalo
+                q.sort(key=lambda x: x[0] in seen)
                 queues[cc] = q
+                seen_terms[cc] = seen
             STATUS["total"] = STATUS["done"] + sum(map(len, queues.values()))
         prio = [c for c in cfg.get("priority_countries", ["us"]) if c in queues]
         for cc in prio:
             # f bled prioritaire: keywords b lugha par défaut (English f US) lwlin
             main_lang = (COUNTRY_SEARCH_LANGS.get(cc) or ["en"])[0]
-            queues[cc].sort(key=lambda x: (not x[1].startswith("vip:"), x[1].startswith("seed:") and x[1] != f"seed:{main_lang}"))
+            seen = seen_terms.get(cc, set())
+            queues[cc].sort(key=lambda x: (x[0] in seen, not x[1].startswith("vip:"),
+                                           x[1].startswith("seed:") and x[1] != f"seed:{main_lang}"))
         while any(queues.values()):
             pending = [c for c in prio if queues.get(c)]
             for cc in (pending[:1] if pending else countries):
@@ -964,6 +999,7 @@ def run_job(discover=True, only_country=None, keyword_ids=None, hourly=False):
                     log(f"Time budget reached: {sum(map(len, queues.values()))} keywords left for the next run.")
                     queues = {}
                     break
+                maybe_checkpoint()
                 term, origin = queues[cc].pop(0)
                 STATUS["step"] = f"discovery:{term}|{cc.upper()}"
                 try:

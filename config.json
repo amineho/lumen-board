@@ -25,7 +25,7 @@
   ],
   "removed_keywords": [],
   "pool_per_run": 0,
-  "time_budget_minutes": 50,
+  "time_budget_minutes": 25,
   "priority_countries": [
     "us"
   ],

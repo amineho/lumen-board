@@ -2,9 +2,10 @@ name: build
 
 on:
   schedule:
-    # kol sa3a f :03. Tool kaykhtar wa7do: check kamel mra f nhar (daily_hour_utc = 3 ➜ 04:03 f lmaghrib),
-    # o f lb9i discovery kaykmmel mn fin w9ef (time_budget_minutes)
-    - cron: "3 * * * *"
+    # kol 2 sa3at (sa3at fardiya UTC: 01:03, 03:03 ... 23:03). Tool kaykhtar wa7do: check kamel mra f nhar
+    # (daily_hour_utc = 3 ➜ 04:03 f lmaghrib), o f lb9i discovery kaykmmel mn fin w9ef (time_budget_minutes).
+    # Hakka run ~25 d9i9a kol 2 sa3at: isti3mal m3a9el dyal GitHub Actions.
+    - cron: "3 1-23/2 * * *"
   workflow_dispatch:
     inputs:
       discover:
@@ -51,6 +52,8 @@ jobs:
           EVENT: ${{ github.event_name }}
           DISCOVER: ${{ github.event.inputs.discover }}
           KEYWORDS: ${{ github.event.inputs.keywords }}
+          ASO_CHECKPOINT: .github/save-data.sh  # sauvegarde kol 10 d9aye9
+          TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           set -- --run
           if [ -n "$KEYWORDS" ]; then set -- "$@" --keywords "$KEYWORDS"
@@ -62,13 +65,4 @@ jobs:
       - name: Sjjel data
         env:
           TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          out=$(mktemp -d)
-          mkdir -p "$out/docs"
-          cp aso.db "$out/"
-          cp -r docs/data "$out/docs/"
-          cd "$out"
-          git init -q -b data
-          git add -A
-          git -c user.name="github-actions[bot]" -c user.email="41898282+github-actions[bot]@users.noreply.github.com" commit -qm update
-          git push -qf "https://x-access-token:${TOKEN}@github.com/${GITHUB_REPOSITORY}.git" data
+        run: bash .github/save-data.sh
