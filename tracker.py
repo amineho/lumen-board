@@ -11,6 +11,7 @@ import datetime
 import gzip
 import html
 import json
+import math
 import os
 import re
 import sqlite3
@@ -523,12 +524,63 @@ def api_state():
     }
 
 
+# Share ta9ribi mn installs dyal keyword 3la 7sab blasa f resultats (CTR)
+def rank_share(rank):
+    if not rank:
+        return 0
+    for limit, share in ((1, .30), (2, .17), (3, .11), (4, .08), (5, .06), (10, .03), (20, .01), (50, .002)):
+        if rank <= limit:
+            return share
+    return 0
+
+
+def keyword_metrics(term, apps, rank):
+    """Ta9dir (machi data dyal Apple): popularity, difficulty o 9ima dyal keyword mn top 10 apps.
+    - popularity: ratings dyal apps li 3ndhom 3la9a b keyword. Ila Apple 3mmrat resultats b apps
+      bla 3la9a (b7al Instagram f "basketball.io"), ya3ni keyword nadir.
+    - difficulty: 9owat top 10 (median dyal ratings).
+    - value: popularity x share dyal blasa dyalk."""
+    if not apps:
+        return {"pop": None, "diff": None, "value": None, "value_label": None}
+    words = tokens(term, split_dots=False) or [term.lower()]
+    stems = [w[:max(4, len(w) - 2)] for w in words]
+
+    def weight(name):
+        # app li fih kolchi kalimat dyal keyword = 1; fih ghir chi wa7da = a9al bzzaf
+        n = (name or "").lower()
+        return (sum(st in n for st in stems) / len(stems)) ** 2
+
+    weights = [weight(a["name"]) for a in apps]
+    rel_sum = sum(w * (a["ratings"] or 0) for w, a in zip(weights, apps))
+    pop = math.log10(rel_sum + 1) / 6 * 100  # ~1M ratings = 100
+    if sum(1 for w in weights if w) < 0.3 * len(apps):
+        pop *= 0.5
+    n_words = len(term.split())
+    pop *= 1.1 if n_words == 1 else 1.0 if n_words == 2 else 0.85
+    # difficulty: ghir apps li 3ndhom 3la9a (apps bla 3la9a kaybano ghir mli keyword nadir)
+    rel_apps = [a for w, a in zip(weights, apps) if w] or []
+    logs = sorted(math.log10((a["ratings"] or 0) + 1) for a in rel_apps)
+    diff = logs[len(logs) // 2] / 5 * 100 if logs else 0  # median ~100k ratings = 100
+    pop, diff = round(min(100, max(0, pop))), round(min(100, max(0, diff)))
+    value = round(pop * rank_share(rank), 1)
+    if rank and rank <= 50:
+        label = "high" if value >= 10 else "medium" if value >= 3 else "low" if value > 0.2 else "none"
+    else:
+        label = "target" if pop >= 45 and diff <= 60 else "none"
+    return {"pop": pop, "diff": diff, "value": value, "value_label": label}
+
+
 def api_keywords():
     with db() as con:
         kws = [dict(r) for r in con.execute("SELECT * FROM keywords ORDER BY country, term")]
         ranks = {}
         for r in con.execute("SELECT * FROM ranks ORDER BY date"):
             ranks.setdefault(r["keyword_id"], []).append({"date": r["date"], "rank": r["rank"], "depth": r["depth"], "method": r["method"]})
+        serps = {}
+        for r in con.execute("""SELECT s.keyword_id, s.name, s.ratings FROM serp s
+                                WHERE s.date = (SELECT MAX(date) FROM serp WHERE keyword_id = s.keyword_id)
+                                ORDER BY s.keyword_id, s.pos"""):
+            serps.setdefault(r["keyword_id"], []).append({"name": r["name"], "ratings": r["ratings"]})
     for k in kws:
         h = ranks.get(k["id"], [])
         k["history"] = h[-90:]
@@ -538,6 +590,7 @@ def api_keywords():
         k["prev"] = h[-2]["rank"] if len(h) > 1 else None
         best = [x["rank"] for x in h if x["rank"]]
         k["best"] = min(best) if best else None
+        k.update(keyword_metrics(k["term"], serps.get(k["id"], []), k["rank"]))
     return kws
 
 

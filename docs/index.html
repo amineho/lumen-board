@@ -79,6 +79,15 @@ tr.busy td { background: var(--accent-soft); }
 .badge { display: inline-block; padding: 1px 8px; border-radius: 99px; font-size: 12px; background: var(--accent-soft); color: var(--accent); }
 .badge.auto { background: var(--good-soft); color: var(--good); }
 .rank { font-weight: 650; font-variant-numeric: tabular-nums; }
+.meter { display: inline-flex; align-items: center; gap: 6px; font-variant-numeric: tabular-nums; }
+.meter i { display: block; width: 46px; height: 6px; border-radius: 9px; background: var(--line); overflow: hidden; }
+.meter i b { display: block; height: 100%; border-radius: 9px; background: var(--accent); }
+.meter.diff i b { background: var(--warn); }
+.vbadge { display: inline-block; padding: 1px 8px; border-radius: 99px; font-size: 12px; font-weight: 600; }
+.vbadge.high { background: var(--good-soft); color: var(--good); }
+.vbadge.medium { background: var(--accent-soft); color: var(--accent); }
+.vbadge.low { background: var(--line); color: var(--muted); }
+.vbadge.target { background: var(--warn-soft); color: var(--warn); }
 .up { color: var(--good); } .down { color: var(--bad); } .muted { color: var(--muted); }
 .yes { color: var(--good); } .no { color: var(--muted); }
 textarea, input, select { font: inherit; color: var(--text); background: var(--bg); border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px; width: 100%; }
@@ -232,6 +241,7 @@ code { font: 12px ui-monospace, Menlo, Consolas, monospace; direction: ltr; unic
           <option value="" data-i18n="all"></option><option value="1" data-i18n="onlyRanked"></option><option value="0" data-i18n="onlyNot"></option></select></div>
         <div><label for="kwSearch" data-i18n="search"></label><input id="kwSearch" dir="auto" data-i18n-ph="searchPh"></div>
       </div>
+      <div class="muted" style="font-size:12px;margin-bottom:8px" data-i18n="estNote"></div>
       <div class="tablewrap"><table id="kwTable"></table></div>
     </div>
     <div class="card hidden" id="serpCard">
@@ -347,6 +357,10 @@ const I18N = {
     gateNoRepo: "The repository {repo} was not found with this token. Check the repository name and that the token includes it.",
     gateNoAccess: "This token has no write access to {repo}.", logout: "Sign out",
     gateMissing: "The token is missing a permission: {perms}. Edit the token, add it and save, then sign in again.", gateEditToken: "Edit the token on GitHub",
+    popularity: "Popularity (est.)", difficulty: "Difficulty (est.)", valueCol: "Value",
+    vHigh: "High", vMedium: "Medium", vLow: "Low", vNone: "None", vTarget: "Target",
+    estNote: "Popularity, difficulty and value are estimates built from the top 10 apps for each keyword and their ratings, because Apple does not publish search volumes. Value combines popularity with your position: <b>High</b> means the keyword likely brings you installs, <b>Target</b> means you don't rank yet but it looks popular and beatable.",
+    bringInstalls: "Bring installs (est.)", targets: "Targets",
     refreshKw: "Refresh rank", chartKw: "Rank history", del: "Remove", confirmDelete: "Remove this keyword?",
     emptyKw: "No keywords yet. Add some above or run a full check.",
     serpTitle: "Top 10 for “{k}”", app: "App",
@@ -412,6 +426,10 @@ const I18N = {
     gateNoRepo: "لم يُعثر على المستودع {repo} بهذا الرمز. تحقّق من اسم المستودع ومن أن الرمز يشمله.",
     gateNoAccess: "هذا الرمز لا يملك صلاحية الكتابة على {repo}.", logout: "تسجيل الخروج",
     gateMissing: "ينقص الرمز إذنٌ: {perms}. عدّل الرمز وأضف الإذن ثم احفظه، وسجّل الدخول من جديد.", gateEditToken: "تعديل الرمز على GitHub",
+    popularity: "الشعبية (تقديرية)", difficulty: "الصعوبة (تقديرية)", valueCol: "القيمة",
+    vHigh: "مرتفعة", vMedium: "متوسطة", vLow: "منخفضة", vNone: "لا شيء", vTarget: "فرصة",
+    estNote: "الشعبية والصعوبة والقيمة تقديرات مبنية على أفضل 10 تطبيقات لكل كلمة مفتاحية وعدد تقييماتها، لأن Apple لا تنشر أحجام البحث. تجمع القيمة بين الشعبية وترتيبك: <b>مرتفعة</b> تعني أن الكلمة تجلب لك تثبيتات على الأرجح، و<b>فرصة</b> تعني أنك لا تظهر فيها بعد لكنها تبدو شائعة ويمكن المنافسة عليها.",
+    bringInstalls: "تجلب تثبيتات (تقديريًا)", targets: "فرص",
     refreshKw: "تحديث الترتيب", chartKw: "سجل الترتيب", del: "حذف", confirmDelete: "هل تريد حذف هذه الكلمة المفتاحية؟",
     emptyKw: "لا توجد كلمات مفتاحية بعد. أضف بعضها في الأعلى أو شغّل فحصًا كاملًا.",
     serpTitle: "أفضل 10 نتائج لـ «{k}»", app: "التطبيق",
@@ -646,6 +664,12 @@ function rankCell(k) {
   if (!k.checked) return `<span class="muted">${t("notChecked")}</span>`;
   return k.rank ? `<span class="rank">#${k.rank}</span>` : `<span class="muted" dir="ltr">&gt; ${k.depth || "?"}</span>`;
 }
+const meter = (v, cls = "") => v == null ? `<span class="muted">—</span>` : `<span class="meter ${cls}"><i><b style="width:${v}%"></b></i>${v}</span>`;
+function valueBadge(k) {
+  const l = k.value_label;
+  if (!l || l === "none") return `<span class="muted">${l ? t("vNone") : "—"}</span>`;
+  return `<span class="vbadge ${l}">${t({high: "vHigh", medium: "vMedium", low: "vLow", target: "vTarget"}[l])}</span>`;
+}
 function fillCountrySelect(sel, withAll) {
   const v = sel.value;
   sel.innerHTML = (withAll ? `<option value="">${t("allCountries")}</option>` : "") + S.config.countries.map(c => `<option value="${c}">${flag(c)} ${c.toUpperCase()}</option>`).join("");
@@ -725,8 +749,10 @@ function renderStats() {
   const ranked = KW.filter(k => k.rank), top10 = ranked.filter(k => k.rank <= 10), top3 = ranked.filter(k => k.rank <= 3);
   const ups = KW.filter(k => k.rank && k.prev && k.rank < k.prev).length, downs = KW.filter(k => k.prev && (!k.rank || k.rank > k.prev)).length;
   const auto = KW.filter(k => k.source === "auto").length;
+  const bring = KW.filter(k => k.value_label === "high" || k.value_label === "medium").length, targets = KW.filter(k => k.value_label === "target").length;
   const bestChart = S.charts.filter(c => c.rank).sort((a, b) => a.rank - b.rank)[0];
   const st = [[num(KW.length), t("kwTracked")], [num(ranked.length), t("ranked")], [num(top3.length), t("top3")], [num(top10.length), t("top10")],
+    [num(bring), t("bringInstalls")], [num(targets), t("targets")],
     [`<span class="up">${ups}</span> / <span class="down">${downs}</span>`, t("upDown")], [num(auto), t("autoFound")],
     [bestChart ? `#${bestChart.rank}` : "—", bestChart ? t("bestChart", {g: esc(S.genre_names[bestChart.genre] || bestChart.genre), c: bestChart.country.toUpperCase()}) : t("notInCharts")]];
   $("#stats").innerHTML = st.map(([v, l]) => `<div class="stat"><div class="v">${v}</div><div class="l">${l}</div></div>`).join("");
@@ -736,21 +762,23 @@ let kwSort = {key: "rank", dir: 1};
 function renderKeywords() {
   const c = $("#kwCountry").value, src = $("#kwSource").value, rk = $("#kwRanked").value, q = $("#kwSearch").value.toLowerCase();
   const rows = KW.filter(k => (!c || k.country === c) && (!src || k.source === src) && (rk === "" || !!k.rank === (rk === "1")) && (!q || k.term.includes(q)));
-  const val = k => kwSort.key === "rank" ? (k.rank || 9999) : kwSort.key === "best" ? (k.best || 9999) : kwSort.key === "change" ? -((k.prev || 999) - (k.rank || 999)) : k[kwSort.key];
+  const VALUE_ORDER = {high: 5, medium: 4, target: 3, low: 2, none: 1};
+  const val = k => kwSort.key === "rank" ? (k.rank || 9999) : kwSort.key === "best" ? (k.best || 9999) : kwSort.key === "change" ? -((k.prev || 999) - (k.rank || 999))
+    : kwSort.key === "pop" || kwSort.key === "diff" ? -(k[kwSort.key] ?? -1) : kwSort.key === "value" ? -((VALUE_ORDER[k.value_label] || 0) * 1000 + (k.value || 0)) : k[kwSort.key];
   rows.sort((a, b) => (val(a) > val(b) ? 1 : val(a) < val(b) ? -1 : 0) * kwSort.dir);
   const th = (k, l) => `<th data-sort="${k}">${l}${kwSort.key === k ? (kwSort.dir > 0 ? " ↑" : " ↓") : ""}</th>`;
   const busy = id => refreshing.has(id) || refreshQueue.has(id);
-  $("#kwTable").innerHTML = `<tr>${th("term", t("keyword"))}${th("country", t("country"))}${th("rank", t("rankToday"))}${th("change", t("change"))}${th("best", t("best"))}<th>${t("last30")}</th>${th("source", t("source"))}<th>${t("actions")}</th></tr>` +
+  $("#kwTable").innerHTML = `<tr>${th("term", t("keyword"))}${th("country", t("country"))}${th("rank", t("rankToday"))}${th("change", t("change"))}${th("best", t("best"))}${th("pop", t("popularity"))}${th("diff", t("difficulty"))}${th("value", t("valueCol"))}<th>${t("last30")}</th>${th("source", t("source"))}<th>${t("actions")}</th></tr>` +
     (rows.length ? rows.map(k => `<tr class="click${busy(k.id) ? " busy" : ""}" data-id="${k.id}">
       <td dir="auto">${esc(k.term)}</td><td>${flag(k.country)} ${k.country.toUpperCase()}</td><td>${rankCell(k)}</td><td>${delta(k)}</td>
-      <td>${k.best ? "#" + k.best : "—"}</td><td>${spark(k.history)}</td>
+      <td>${k.best ? "#" + k.best : "—"}</td><td>${meter(k.pop)}</td><td>${meter(k.diff, "diff")}</td><td>${valueBadge(k)}</td><td>${spark(k.history)}</td>
       <td><span class="badge ${k.source}">${k.source === "auto" ? t("badgeAuto") : t("badgeYou")}</span></td>
       <td><span class="row-actions">
         <button class="icon-btn${busy(k.id) ? " spin" : ""}" data-refresh="${k.id}" title="${t("refreshKw")}" aria-label="${t("refreshKw")}" ${busy(k.id) ? "disabled" : ""}>${ICONS.refresh}</button>
         <button class="icon-btn" data-chart="${k.id}" title="${t("chartKw")}" aria-label="${t("chartKw")}">${ICONS.chart}</button>
         <button class="icon-btn danger" data-del="${k.id}" title="${t("del")}" aria-label="${t("del")}">${ICONS.trash}</button>
       </span></td></tr>`).join("")
-      : `<tr><td colspan="8" class="muted">${t("emptyKw")}</td></tr>`);
+      : `<tr><td colspan="11" class="muted">${t("emptyKw")}</td></tr>`);
   $("#refreshAll").disabled = refreshBusy && !KW.some(k => !busy(k.id));
   $("#refreshAll").classList.toggle("spin", refreshBusy);
 }
@@ -831,7 +859,8 @@ function showChart(id) {
   $("#chartTitle").innerHTML = `${t("historyTitle", {k: bdi(k.term)})} ${flag(k.country)}`;
   const avg = ranked.length ? (ranked.reduce((s, p) => s + p.rank, 0) / ranked.length) : null;
   $("#chartStats").innerHTML = [[t("today"), rankCell(k)], [t("best"), k.best ? "#" + k.best : "—"],
-    [t("avg"), avg ? "#" + avg.toFixed(1) : "—"], [t("daysTracked"), num(h.length)]]
+    [t("avg"), avg ? "#" + avg.toFixed(1) : "—"], [t("daysTracked"), num(h.length)],
+    [t("popularity"), k.pop ?? "—"], [t("difficulty"), k.diff ?? "—"], [t("valueCol"), valueBadge(k)]]
     .map(([l, v]) => `<div><b>${v}</b><span>${l}</span></div>`).join("");
   $("#chartModal").classList.remove("hidden");
   $("#chartBox").innerHTML = rankChartSvg(h, Math.max(300, $("#chartBox").clientWidth || 680));
