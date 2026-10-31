@@ -1092,7 +1092,11 @@ async function renderAnalysis() {
 // key f charts: "7016" (iPhone), "ipad:7016", "mac:7016"
 const PLATFORM_NAMES = {iphone: "iPhone", ipad: "iPad", mac: "Mac"};
 const chartPlatform = g => g.includes(":") ? g.split(":")[0] : "iphone";
-const chartGenre = g => (S.genre_names[g.split(":").pop()] || g.split(":").pop());
+// smiyat d categories b l3arabiya (b English kayjiw mn backend)
+const GENRE_AR = {"36": "كل الفئات", "6014": "كل الألعاب", "7016": "ألعاب رياضية", "6004": "الرياضة (تطبيقات)", "7015": "ألعاب المحاكاة",
+  "7001": "ألعاب الحركة", "7002": "ألعاب المغامرة", "7003": "ألعاب عادية", "7012": "ألعاب الألغاز", "7013": "ألعاب السباق", "7014": "ألعاب تقمص الأدوار", "7017": "ألعاب الاستراتيجية"};
+const chartGenre = g => { const id = g.split(":").pop(); return (LANG === "ar" && GENRE_AR[id]) || S.genre_names[id] || id; };
+const genreOrder = g => { const i = (S.config.chart_genres || []).indexOf(g.split(":").pop()); return i < 0 ? 99 : i; };
 let chPlatform = store.get("aso_chart_pf") || "iphone";
 function renderCharts() {
   document.querySelectorAll("#pfNav button").forEach(b => b.classList.toggle("on", b.dataset.pf === chPlatform));
@@ -1105,7 +1109,7 @@ function renderCharts() {
     h.sort((a, b) => a.date.localeCompare(b.date));
     const ranks = h.map(x => x.rank).filter(Boolean);
     return {last: h[h.length - 1], best: ranks.length ? Math.min(...ranks) : null, hist: h.slice(-30)};
-  }).sort((a, b) => (!a.last.rank - !b.last.rank) || (a.last.rank || 0) - (b.last.rank || 0) || a.last.country.localeCompare(b.last.country) || a.last.genre.localeCompare(b.last.genre));
+  }).sort((a, b) => (!a.last.rank - !b.last.rank) || (a.last.rank || 0) - (b.last.rank || 0) || a.last.country.localeCompare(b.last.country) || genreOrder(a.last.genre) - genreOrder(b.last.genre));
   const tracked = (S.config.chart_platforms || ["iphone", "ipad", "mac"]).includes(chPlatform);
   const inTop = rows.filter(r => r.last.rank);
   $("#chStats").innerHTML = [[num(inTop.length) + " / " + num(rows.length), t("chInTop")], [inTop.length ? "#" + Math.min(...inTop.map(r => r.last.rank)) : "—", t("chBestRank")]]

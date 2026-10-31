@@ -75,6 +75,8 @@ DEFAULT_CONFIG = {
     "priority_countries": ["us"],
     # platforms li kantba3o fihom top charts (kol wa7d bo7do)
     "chart_platforms": ["iphone", "ipad", "mac"],
+    # charts (Top Free): 36 = kolchi, 6014 = All Games, 7016 = Sports Games, 6004 = Sports, 7015 = Simulation Games
+    "chart_genres": ["36", "6014", "7016", "6004", "7015"],
     # ch7al mn recherche f autocomplete dyal App Store f kol bled f kol run (bled prioritaire: x2)
     "suggest_per_run": 60,
     # sa3a (UTC) dyal check kamel f GitHub: 3 = 4 d sba7 f lmaghrib
@@ -445,9 +447,9 @@ def app_subtitle(app_id, country):
 
 
 GENRE_NAMES = {
-    "6014": "All Games", "7001": "Action", "7002": "Adventure", "7003": "Casual", "7004": "Board",
+    "36": "All Categories", "6004": "Sports (apps)", "6014": "All Games", "7001": "Action", "7002": "Adventure", "7003": "Casual", "7004": "Board",
     "7005": "Card", "7006": "Casino", "7009": "Family", "7011": "Music", "7012": "Puzzle",
-    "7013": "Racing", "7014": "Role Playing", "7015": "Simulation", "7016": "Sports",
+    "7013": "Racing", "7014": "Role Playing", "7015": "Simulation Games", "7016": "Sports Games",
     "7017": "Strategy", "7018": "Trivia", "7019": "Word",
 }
 
@@ -934,12 +936,9 @@ def run_job(discover=True, only_country=None, keyword_ids=None, hourly=False):
         # 2. top charts (top 200) f kol run (kol 2 sa3at): charts kaytbdlo b zerba, kansjjlo a7san rank f nhar
         for cc in [] if keywords_only else countries:
             STATUS["step"] = f"charts:{cc.upper()}"
-            cc_genres = genres
-            if hourly:  # f run dyal kol sa3a, categories mn akher app info
-                own = own_info(cc)
-                cc_genres = ["6014"] + [g for g in (own.get("genre_ids") or []) if g.startswith("70")]
+            cc_genres = [str(g) for g in cfg.get("chart_genres", DEFAULT_CONFIG["chart_genres"])]
             for platform in [x for x in cfg.get("chart_platforms", CHART_PLATFORMS) if x in CHART_PLATFORMS]:
-                for g in list(dict.fromkeys(cc_genres))[:3]:
+                for g in list(dict.fromkeys(cc_genres)):
                     key = g if platform == "iphone" else f"{platform}:{g}"  # f table charts: "mac:7016", "ipad:6014"...
                     try:
                         ids = chart(cc, g, platform)
@@ -954,7 +953,7 @@ def run_job(discover=True, only_country=None, keyword_ids=None, hourly=False):
                             log(f"🏆 {cc.upper()} {platform} top chart {GENRE_NAMES.get(g, g)}: #{rank}")
                     except Exception as e:
                         log(f"{cc.upper()} {platform} chart {g}: {e}")
-            STATUS["done"] += 3
+            STATUS["done"] += 1
 
         # 3. keywords li kantba3o
         hard_deadline = started + HARD_LIMIT_MIN * 60
