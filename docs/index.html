@@ -436,7 +436,7 @@ const I18N = {
     runFull: "Full check + discovery", refreshAll: "Refresh all keywords",
     tabOverview: "Overview", tabKeywords: "Keywords", tabDiscovery: "Discovery", tabAnalysis: "Analysis", tabCharts: "Top charts", tabSettings: "Settings",
     kwTracked: "Keywords tracked", ranked: "Ranking", top3: "In top 3", top10: "In top 10", upDown: "Up / down today", autoFound: "Found automatically",
-    bestChart: "Top chart: {g} {c}", notInCharts: "Top charts: not in top 100",
+    bestChart: "Top chart: {g} {c}", notInCharts: "Top charts: not in top 200",
     appInfo: "App details", fName: "Name", fSubtitle: "Subtitle", fDeveloper: "Developer", fRating: "Rating", ratingsN: "{n} ratings", noRating: "No ratings yet",
     fVersion: "Version", fUpdated: "Last updated", fReleased: "Released", fCategories: "Categories", fSize: "Size", fMinIos: "Minimum iOS",
     fAge: "Age rating", fPrice: "Price", fLanguages: "Languages", fLink: "Link",
@@ -492,7 +492,7 @@ const I18N = {
     word: "Word", competitorsN: "Competitors", inTitle: "In your name/subtitle", inKeywords: "In your keywords", inDesc: "In description",
     yourRank: "Your rank", tip: "Advice", tipTrademark: "⚠️ trademark, don't use", tipGood: "good", tipInKw: "in your keywords", tipAdd: "add it",
     emptyAn: "No data yet. Add keywords and run a check.",
-    chTitle: "Rank in top charts (Top Free, top 100)", category: "Category", notTop100: "not in top 100", date: "Date",
+    chTitle: "Rank in top charts (Top Free, top 200). Checked every 2 hours, the best rank of each day is kept.", category: "Category", notTop100: "not in top 200", date: "Date",
     appId: "App Apple ID", hour: "Daily check hour (0-23)", cand: "New keywords to test per country", save: "Save", saved: "Saved ✔",
     countriesL: "Countries (comma-separated codes: us, gb, fr, ma, sa…)", myKw: "Your App Store Connect keywords (100 characters)",
     ghIntro: "This page reads its data from GitHub. To add keywords, change settings, refresh ranks or start a check from here, add a GitHub token. The token stays in this browser only.",
@@ -528,7 +528,7 @@ const I18N = {
     runFull: "فحص كامل + اكتشاف", refreshAll: "تحديث كل الكلمات المفتاحية",
     tabOverview: "نظرة عامة", tabKeywords: "الكلمات المفتاحية", tabDiscovery: "الاكتشاف", tabAnalysis: "التحليل", tabCharts: "قوائم الأفضل", tabSettings: "الإعدادات",
     kwTracked: "كلمات مفتاحية مُتتبَّعة", ranked: "يظهر فيها التطبيق", top3: "ضمن أفضل 3", top10: "ضمن أفضل 10", upDown: "صعود / هبوط اليوم", autoFound: "اكتُشفت تلقائيًا",
-    bestChart: "قائمة الأفضل: {g} {c}", notInCharts: "قوائم الأفضل: خارج أفضل 100",
+    bestChart: "قائمة الأفضل: {g} {c}", notInCharts: "قوائم الأفضل: خارج أفضل 200",
     appInfo: "تفاصيل التطبيق", fName: "الاسم", fSubtitle: "العنوان الفرعي", fDeveloper: "المطوّر", fRating: "التقييم", ratingsN: "{n} تقييم", noRating: "لا توجد تقييمات بعد",
     fVersion: "الإصدار", fUpdated: "آخر تحديث", fReleased: "تاريخ الإطلاق", fCategories: "الفئات", fSize: "الحجم", fMinIos: "أدنى إصدار iOS",
     fAge: "التصنيف العمري", fPrice: "السعر", fLanguages: "اللغات", fLink: "الرابط",
@@ -584,7 +584,7 @@ const I18N = {
     word: "الكلمة", competitorsN: "عدد المنافسين", inTitle: "في الاسم/العنوان الفرعي", inKeywords: "في كلماتك المفتاحية", inDesc: "في الوصف",
     yourRank: "ترتيبك", tip: "نصيحة", tipTrademark: "⚠️ علامة تجارية، لا تستخدمها", tipGood: "جيد", tipInKw: "موجودة في كلماتك", tipAdd: "أضِفها",
     emptyAn: "لا توجد بيانات بعد. أضف كلمات مفتاحية وشغّل فحصًا.",
-    chTitle: "الترتيب في قوائم الأفضل (الأفضل المجانية، أفضل 100)", category: "الفئة", notTop100: "خارج أفضل 100", date: "التاريخ",
+    chTitle: "الترتيب في قوائم الأفضل (الأفضل المجانية، أفضل 200). يُفحص كل ساعتين ويُحفظ أفضل ترتيب في كل يوم.", category: "الفئة", notTop100: "خارج أفضل 200", date: "التاريخ",
     appId: "معرّف التطبيق في Apple", hour: "ساعة الفحص اليومي (0-23)", cand: "عدد الكلمات الجديدة المختبرة لكل دولة", save: "حفظ", saved: "تم الحفظ ✔",
     countriesL: "الدول (رموز مفصولة بفواصل: us, gb, fr, ma, sa…)", myKw: "كلماتك المفتاحية في App Store Connect (100 حرف)",
     ghIntro: "تقرأ هذه الصفحة بياناتها من GitHub. لإضافة كلمات مفتاحية أو تغيير الإعدادات أو تحديث الترتيب أو بدء فحص من هنا، أضف رمز وصول (Token) من GitHub. يبقى الرمز في هذا المتصفح فقط.",
@@ -1184,7 +1184,7 @@ async function buildAiReport() {
 
   const latest = {};
   S.charts.forEach(ch => { latest[ch.country + "|" + ch.genre] = ch; });
-  md += `\n## Top charts (Top Free, top 100)\n\n` + mdTable(["Country", "Category", "Rank"], Object.values(latest).map(ch => [ch.country.toUpperCase(), S.genre_names[ch.genre] || ch.genre, ch.rank ? `#${ch.rank}` : "not in top 100"]));
+  md += `\n## Top charts (Top Free, top 200, best rank of the day)\n\n` + mdTable(["Country", "Category", "Rank"], Object.values(latest).map(ch => [ch.country.toUpperCase(), S.genre_names[ch.genre] || ch.genre, ch.rank ? `#${ch.rank}` : "not in top 200"]));
   return md;
 }
 

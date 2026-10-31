@@ -405,6 +405,22 @@ def check_rank(term, country, app_id, fast=False):
 
 
 def chart(country, genre):
+    """Top Free (top 200). Page dyal charts f App Store fiha 25 app kaybano + "remainingContent" (lba9i b tartib).
+    RSS dyal Apple kat7bes f 100, ya3ni kankhdmo bih ghir ila page ma khdmatch."""
+    try:
+        h = fetch(f"https://apps.apple.com/{country}/iphone/charts/{genre}?chart=top-free")
+        blocks = list(re.finditer(r'"nextPage":\{"remainingContent":\[(.*?)\]', h))
+        end = blocks[0].start() if blocks else len(h)
+        ids = []
+        for m in re.finditer(r'/app/[^"/]+/id(\d+)', h[:end]):
+            if m.group(1) not in ids:
+                ids.append(m.group(1))
+        if blocks:
+            ids += [x for x in re.findall(r'"id":"(\d+)","type":"apps"', blocks[0].group(1)) if x not in ids]
+        if len(ids) >= 25:
+            return ids
+    except Exception as e:
+        log(f"{country.upper()} chart page {genre}: {e}")
     d = json.loads(fetch(f"https://itunes.apple.com/{country}/rss/topfreeapplications/limit=100/genre={genre}/json"))
     entries = d.get("feed", {}).get("entry", [])
     if isinstance(entries, dict):
@@ -448,6 +464,12 @@ def tokens(text, split_dots=True):
 def phrases(text, n):
     t = tokens(text, split_dots=False)
     return [" ".join(t[i:i + n]) for i in range(len(t) - n + 1) if not any("." in w for w in t[i:i + n])]
+
+
+def own_info(country):
+    with db() as con:
+        row = con.execute("SELECT data FROM app_info WHERE country=? ORDER BY date DESC LIMIT 1", (country,)).fetchone()
+    return json.loads(row["data"]) if row else {}
 
 
 def own_text(country):
@@ -902,15 +924,23 @@ def run_job(discover=True, only_country=None, keyword_ids=None, hourly=False):
                 log(f"{cc.upper()}: lookup failed: {e}")
             STATUS["done"] += 2
 
-        # 2. top charts
-        for cc in [] if keywords_only or hourly else countries:
+        # 2. top charts (top 200) f kol run (kol 2 sa3at): charts kaytbdlo b zerba, kansjjlo a7san rank f nhar
+        for cc in [] if keywords_only else countries:
             STATUS["step"] = f"charts:{cc.upper()}"
-            for g in genres[:3]:
+            cc_genres = genres
+            if hourly:  # f run dyal kol sa3a, categories mn akher app info
+                own = own_info(cc)
+                cc_genres = ["6014"] + [g for g in (own.get("genre_ids") or []) if g.startswith("70")]
+            for g in list(dict.fromkeys(cc_genres))[:3]:
                 try:
                     ids = chart(cc, g)
                     rank = ids.index(app_id) + 1 if app_id in ids else None
                     with db() as con:
-                        con.execute("INSERT OR REPLACE INTO charts VALUES (?,?,?,?)", (d, cc, g, rank))
+                        con.execute("""INSERT INTO charts VALUES (?,?,?,?) ON CONFLICT(date, country, genre) DO UPDATE SET
+                                       rank = CASE WHEN charts.rank IS NULL THEN excluded.rank WHEN excluded.rank IS NULL THEN charts.rank
+                                       ELSE MIN(charts.rank, excluded.rank) END""", (d, cc, g, rank))
+                    if rank:
+                        log(f"🏆 {cc.upper()} top chart {GENRE_NAMES.get(g, g)}: #{rank}")
                 except Exception as e:
                     log(f"{cc.upper()} chart {g}: {e}")
             STATUS["done"] += 3
