@@ -356,8 +356,16 @@ code { font: 12px ui-monospace, Menlo, Consolas, monospace; direction: ltr; unic
 
   <!-- CHARTS -->
   <section id="tab-charts" class="hidden">
+    <div class="seg subnav" id="pfNav" role="tablist">
+      <button data-pf="iphone" class="on">iPhone</button>
+      <button data-pf="ipad">iPad</button>
+      <button data-pf="mac">Mac</button>
+    </div>
     <div class="card">
-      <h2 data-i18n="chTitle"></h2>
+      <h2 id="chHead"></h2>
+      <div class="muted" style="margin-bottom:10px" data-i18n="chTitle"></div>
+      <div class="grid" id="chStats"></div>
+      <div class="row" style="margin-bottom:10px"><div style="max-width:200px"><select id="chCountry" aria-label="Country"></select></div></div>
       <div class="tablewrap"><table id="chTable"></table></div>
     </div>
   </section>
@@ -390,6 +398,12 @@ code { font: 12px ui-monospace, Menlo, Consolas, monospace; direction: ltr; unic
       </div>
       <label for="cfgCountries" data-i18n="countriesL"></label>
       <input id="cfgCountries" dir="ltr">
+      <label data-i18n="chartPlatformsL"></label>
+      <div class="chips" id="cfgPlatforms">
+        <label><input type="checkbox" value="iphone"> iPhone</label>
+        <label><input type="checkbox" value="ipad"> iPad</label>
+        <label><input type="checkbox" value="mac"> Mac</label>
+      </div>
       <label for="cfgKw" data-i18n="myKw"></label>
       <textarea id="cfgKw" dir="auto" placeholder="basketball,dunk,hoops,streetball,…"></textarea>
       <div style="margin-top:12px"><button class="primary" id="saveCfg" data-i18n="save"></button> <span class="muted" id="cfgMsg"></span></div>
@@ -492,7 +506,9 @@ const I18N = {
     word: "Word", competitorsN: "Competitors", inTitle: "In your name/subtitle", inKeywords: "In your keywords", inDesc: "In description",
     yourRank: "Your rank", tip: "Advice", tipTrademark: "⚠️ trademark, don't use", tipGood: "good", tipInKw: "in your keywords", tipAdd: "add it",
     emptyAn: "No data yet. Add keywords and run a check.",
-    platform: "Platform", chTitle: "Rank in top charts (Top Free, top 200) on iPhone, iPad and Mac. Checked every 2 hours, the best rank of each day is kept.", category: "Category", notTop100: "not in top 200", date: "Date",
+    platform: "Platform", chTitle: "Top Free, top 200, for each category of your game. Checked every 2 hours, the best rank of each day is kept.",
+    chHeadPf: "Top charts · {pf}", chInTop: "Charts where your game is in the top 200", chBestRank: "Best rank today", chNotTracked: "This platform is not tracked. Turn it on in Settings ➜ Platforms for top charts.",
+    chartPlatformsL: "Platforms for top charts (each one separately)", history: "Last 30 days", category: "Category", notTop100: "not in top 200", date: "Date",
     appId: "App Apple ID", hour: "Daily check hour (0-23)", cand: "New keywords to test per country", save: "Save", saved: "Saved ✔",
     countriesL: "Countries (comma-separated codes: us, gb, fr, ma, sa…)", myKw: "Your App Store Connect keywords (100 characters)",
     ghIntro: "This page reads its data from GitHub. To add keywords, change settings, refresh ranks or start a check from here, add a GitHub token. The token stays in this browser only.",
@@ -584,7 +600,9 @@ const I18N = {
     word: "الكلمة", competitorsN: "عدد المنافسين", inTitle: "في الاسم/العنوان الفرعي", inKeywords: "في كلماتك المفتاحية", inDesc: "في الوصف",
     yourRank: "ترتيبك", tip: "نصيحة", tipTrademark: "⚠️ علامة تجارية، لا تستخدمها", tipGood: "جيد", tipInKw: "موجودة في كلماتك", tipAdd: "أضِفها",
     emptyAn: "لا توجد بيانات بعد. أضف كلمات مفتاحية وشغّل فحصًا.",
-    platform: "المنصة", chTitle: "الترتيب في قوائم الأفضل (الأفضل المجانية، أفضل 200) على iPhone و iPad و Mac. يُفحص كل ساعتين ويُحفظ أفضل ترتيب في كل يوم.", category: "الفئة", notTop100: "خارج أفضل 200", date: "التاريخ",
+    platform: "المنصة", chTitle: "الأفضل المجانية، أفضل 200، لكل فئة من فئات لعبتك. يُفحص كل ساعتين ويُحفظ أفضل ترتيب في كل يوم.",
+    chHeadPf: "قوائم الأفضل · {pf}", chInTop: "قوائم تظهر فيها لعبتك ضمن أفضل 200", chBestRank: "أفضل ترتيب اليوم", chNotTracked: "هذه المنصة غير مُتتبَّعة. فعّلها في الإعدادات ← منصات قوائم الأفضل.",
+    chartPlatformsL: "منصات قوائم الأفضل (كل منصة على حدة)", history: "آخر 30 يومًا", category: "الفئة", notTop100: "خارج أفضل 200", date: "التاريخ",
     appId: "معرّف التطبيق في Apple", hour: "ساعة الفحص اليومي (0-23)", cand: "عدد الكلمات الجديدة المختبرة لكل دولة", save: "حفظ", saved: "تم الحفظ ✔",
     countriesL: "الدول (رموز مفصولة بفواصل: us, gb, fr, ma, sa…)", myKw: "كلماتك المفتاحية في App Store Connect (100 حرف)",
     ghIntro: "تقرأ هذه الصفحة بياناتها من GitHub. لإضافة كلمات مفتاحية أو تغيير الإعدادات أو تحديث الترتيب أو بدء فحص من هنا، أضف رمز وصول (Token) من GitHub. يبقى الرمز في هذا المتصفح فقط.",
@@ -785,7 +803,7 @@ async function api(p, body) {
   }
   if (u.pathname === "/api/config") {
     await editConfig(cfg => {
-      cfg.app_id = body.app_id; cfg.candidates_per_run = +body.candidates_per_run; cfg.pool_per_run = +body.pool_per_run; cfg.time_budget_minutes = +body.time_budget_minutes; cfg.my_keywords = body.my_keywords;
+      cfg.app_id = body.app_id; cfg.candidates_per_run = +body.candidates_per_run; cfg.pool_per_run = +body.pool_per_run; cfg.time_budget_minutes = +body.time_budget_minutes; cfg.chart_platforms = body.chart_platforms; cfg.my_keywords = body.my_keywords;
       cfg.countries = body.countries.split(",").map(c => c.trim().toLowerCase()).filter(Boolean);
       return "update";
     });
@@ -870,11 +888,13 @@ function renderHeader() {
 }
 function renderSettingsForm() {
   const cc = S.config.countries;
-  [["#infoCountry"], ["#kwCountry", 1], ["#cdCountry", 1], ["#anCountry"], ["#coCountry"], ["#paCountry"], ["#vsCountry"]].forEach(([s, a]) => fillCountrySelect($(s), a));
+  [["#infoCountry"], ["#kwCountry", 1], ["#cdCountry", 1], ["#anCountry"], ["#coCountry"], ["#paCountry"], ["#vsCountry"], ["#chCountry", 1]].forEach(([s, a]) => fillCountrySelect($(s), a));
   const checked = new Set([...document.querySelectorAll("#addCountries input:checked")].map(i => i.value));
   $("#addCountries").innerHTML = cc.map(c => `<label><input type="checkbox" value="${c}" ${!checked.size || checked.has(c) ? "checked" : ""}> ${flag(c)} ${c.toUpperCase()}</label>`).join("");
   if (!$("#cfgApp").dataset.filled) {
     $("#cfgApp").value = S.config.app_id; $("#cfgHour").value = S.config.daily_hour; $("#cfgCand").value = S.config.candidates_per_run; $("#cfgPool").value = S.config.pool_per_run ?? 0; $("#cfgBudget").value = S.config.time_budget_minutes ?? 0;
+    const pfs = S.config.chart_platforms || ["iphone", "ipad", "mac"];
+    document.querySelectorAll("#cfgPlatforms input").forEach(i => i.checked = pfs.includes(i.value));
     $("#cfgCountries").value = cc.join(", "); $("#cfgKw").value = S.config.my_keywords; $("#cfgApp").dataset.filled = "1";
   }
   $("#apiMode").innerHTML = S.api_mode === "blocked" ? t("apiBlocked") : S.api_mode === "ok" ? t("apiOk") : t("apiNone");
@@ -1073,20 +1093,29 @@ async function renderAnalysis() {
 const PLATFORM_NAMES = {iphone: "iPhone", ipad: "iPad", mac: "Mac"};
 const chartPlatform = g => g.includes(":") ? g.split(":")[0] : "iphone";
 const chartGenre = g => (S.genre_names[g.split(":").pop()] || g.split(":").pop());
+let chPlatform = store.get("aso_chart_pf") || "iphone";
 function renderCharts() {
-  const latest = {}, best = {};
-  S.charts.forEach(c => {
-    const k = c.country + "|" + c.genre;
-    latest[k] = c;
-    if (c.rank && (!best[k] || c.rank < best[k])) best[k] = c.rank;
-  });
-  const PF = {iphone: 0, ipad: 1, mac: 2};
-  // li tal3 fihom game lwlin, mn ba3d b bled o platform
-  const rows = Object.values(latest).sort((a, b) => (!a.rank - !b.rank) || (a.rank || 0) - (b.rank || 0) || a.country.localeCompare(b.country)
-    || PF[chartPlatform(a.genre)] - PF[chartPlatform(b.genre)] || a.genre.localeCompare(b.genre));
-  $("#chTable").innerHTML = `<tr><th>${t("country")}</th><th>${t("platform")}</th><th>${t("category")}</th><th>${t("rankToday")}</th><th>${t("best")}</th><th>${t("date")}</th></tr>` +
-    (rows.length ? rows.map(c => `<tr><td>${flag(c.country)} ${c.country.toUpperCase()}</td><td>${PLATFORM_NAMES[chartPlatform(c.genre)]}</td><td>${esc(chartGenre(c.genre))}</td><td>${c.rank ? `<span class="rank">#${c.rank}</span>` : `<span class="muted">${t("notTop100")}</span>`}</td><td>${best[c.country + "|" + c.genre] ? "#" + best[c.country + "|" + c.genre] : "—"}</td><td class="muted">${fmtDate(c.date)}</td></tr>`).join("")
-      : `<tr><td colspan="6" class="muted">${t("noData")}</td></tr>`);
+  document.querySelectorAll("#pfNav button").forEach(b => b.classList.toggle("on", b.dataset.pf === chPlatform));
+  $("#chHead").textContent = t("chHeadPf", {pf: PLATFORM_NAMES[chPlatform]});
+  const cc = $("#chCountry").value;
+  const mine = S.charts.filter(c => chartPlatform(c.genre) === chPlatform && (!cc || c.country === cc));
+  const series = {};
+  mine.forEach(c => (series[c.country + "|" + c.genre] ??= []).push(c));
+  const rows = Object.values(series).map(h => {
+    h.sort((a, b) => a.date.localeCompare(b.date));
+    const ranks = h.map(x => x.rank).filter(Boolean);
+    return {last: h[h.length - 1], best: ranks.length ? Math.min(...ranks) : null, hist: h.slice(-30)};
+  }).sort((a, b) => (!a.last.rank - !b.last.rank) || (a.last.rank || 0) - (b.last.rank || 0) || a.last.country.localeCompare(b.last.country) || a.last.genre.localeCompare(b.last.genre));
+  const tracked = (S.config.chart_platforms || ["iphone", "ipad", "mac"]).includes(chPlatform);
+  const inTop = rows.filter(r => r.last.rank);
+  $("#chStats").innerHTML = [[num(inTop.length) + " / " + num(rows.length), t("chInTop")], [inTop.length ? "#" + Math.min(...inTop.map(r => r.last.rank)) : "—", t("chBestRank")]]
+    .map(([v, l]) => `<div class="stat"><div class="v">${v}</div><div class="l">${l}</div></div>`).join("");
+  const sparkChart = h => spark(h.map(x => ({rank: x.rank, depth: 200})));
+  $("#chTable").innerHTML = `<tr><th>${t("country")}</th><th>${t("category")}</th><th>${t("rankToday")}</th><th>${t("best")}</th><th>${t("history")}</th><th>${t("date")}</th></tr>` +
+    (rows.length ? rows.map(r => `<tr><td>${flag(r.last.country)} ${r.last.country.toUpperCase()}</td><td>${esc(chartGenre(r.last.genre))}</td>
+      <td>${r.last.rank ? `<span class="rank">#${r.last.rank}</span>` : `<span class="muted">${t("notTop100")}</span>`}</td>
+      <td>${r.best ? "#" + r.best : "—"}</td><td>${sparkChart(r.hist)}</td><td class="muted">${fmtDate(r.last.date)}</td></tr>`).join("")
+      : `<tr><td colspan="6" class="muted" style="white-space:normal">${tracked ? t("noData") : t("chNotTracked")}</td></tr>`);
 }
 
 function renderStatus(st) {
@@ -1396,6 +1425,11 @@ $("#kwSearch").oninput = kwFirst;
 ["#cdCountry", "#cdRanked"].forEach(s => $(s).onchange = cdFirst);
 $("#anCountry").onchange = renderAnalysis;
 $("#coCountry").onchange = renderCompetitors;
+$("#chCountry").onchange = renderCharts;
+$("#pfNav").onclick = e => {
+  const pf = e.target.closest("button")?.dataset.pf; if (!pf) return;
+  chPlatform = pf; store.set("aso_chart_pf", pf); renderCharts();
+};
 $("#paCountry").onchange = () => { PAGERS.pa.page = 1; renderPool(); };
 const vsFirst = () => { PAGERS.vs.page = 1; renderVip(); };
 $("#vsCountry").onchange = vsFirst; $("#vsStatus").onchange = vsFirst; $("#vsSearch").oninput = vsFirst;
@@ -1434,7 +1468,8 @@ $("#addBtn").onclick = act(async () => {
   await loadAll(); flash(t("runDone"), "ok");
 });
 $("#saveCfg").onclick = act(async () => {
-  const r = await api("/api/config", {app_id: $("#cfgApp").value.trim(), daily_hour: $("#cfgHour").value, candidates_per_run: $("#cfgCand").value, pool_per_run: $("#cfgPool").value, time_budget_minutes: $("#cfgBudget").value, countries: $("#cfgCountries").value, my_keywords: $("#cfgKw").value});
+  const r = await api("/api/config", {app_id: $("#cfgApp").value.trim(), daily_hour: $("#cfgHour").value, candidates_per_run: $("#cfgCand").value, pool_per_run: $("#cfgPool").value, time_budget_minutes: $("#cfgBudget").value,
+    chart_platforms: [...document.querySelectorAll("#cfgPlatforms input:checked")].map(i => i.value), countries: $("#cfgCountries").value, my_keywords: $("#cfgKw").value});
   $("#cfgMsg").textContent = t("saved");
   $("#cfgApp").dataset.filled = "";
   if (!r.github) return loadAll();

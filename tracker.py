@@ -73,6 +73,8 @@ DEFAULT_CONFIG = {
     "pool_per_run": 0,
     # bldan li kaykmlo discovery dyalhom 9bel lakhrin (b tartib)
     "priority_countries": ["us"],
+    # platforms li kantba3o fihom top charts (kol wa7d bo7do)
+    "chart_platforms": ["iphone", "ipad", "mac"],
     # ch7al mn recherche f autocomplete dyal App Store f kol bled f kol run (bled prioritaire: x2)
     "suggest_per_run": 60,
     # sa3a (UTC) dyal check kamel f GitHub: 3 = 4 d sba7 f lmaghrib
@@ -936,7 +938,7 @@ def run_job(discover=True, only_country=None, keyword_ids=None, hourly=False):
             if hourly:  # f run dyal kol sa3a, categories mn akher app info
                 own = own_info(cc)
                 cc_genres = ["6014"] + [g for g in (own.get("genre_ids") or []) if g.startswith("70")]
-            for platform in CHART_PLATFORMS:
+            for platform in [x for x in cfg.get("chart_platforms", CHART_PLATFORMS) if x in CHART_PLATFORMS]:
                 for g in list(dict.fromkeys(cc_genres))[:3]:
                     key = g if platform == "iphone" else f"{platform}:{g}"  # f table charts: "mac:7016", "ipad:6014"...
                     try:
@@ -1360,7 +1362,8 @@ class Handler(BaseHTTPRequestHandler):
             return self.send({"ok": True})
         if u.path == "/api/config":
             cfg = load_config()
-            for k in ("app_id", "countries", "daily_hour", "candidates_per_run", "pool_per_run", "time_budget_minutes", "my_keywords"):
+            for k in ("app_id", "countries", "daily_hour", "candidates_per_run", "pool_per_run", "time_budget_minutes", "my_keywords",
+                      "chart_platforms"):
                 if k in b:
                     cfg[k] = b[k]
             if isinstance(cfg["countries"], str):

@@ -31,5 +31,10 @@
     "us"
   ],
   "daily_hour_utc": 3,
-  "suggest_per_run": 60
+  "suggest_per_run": 60,
+  "chart_platforms": [
+    "iphone",
+    "ipad",
+    "mac"
+  ]
 }
