@@ -404,11 +404,14 @@ def check_rank(term, country, app_id, fast=False):
     return None, max(len(api), len(ids)), "api", ids, subtitles
 
 
-def chart(country, genre):
+CHART_PLATFORMS = ["iphone", "ipad", "mac"]  # Mac App Store kayban fih game d iPad 3la Mac (charts bo7dhom)
+
+
+def chart(country, genre, platform="iphone"):
     """Top Free (top 200). Page dyal charts f App Store fiha 25 app kaybano + "remainingContent" (lba9i b tartib).
     RSS dyal Apple kat7bes f 100, ya3ni kankhdmo bih ghir ila page ma khdmatch."""
     try:
-        h = fetch(f"https://apps.apple.com/{country}/iphone/charts/{genre}?chart=top-free")
+        h = fetch(f"https://apps.apple.com/{country}/{platform}/charts/{genre}?chart=top-free")
         blocks = list(re.finditer(r'"nextPage":\{"remainingContent":\[(.*?)\]', h))
         end = blocks[0].start() if blocks else len(h)
         ids = []
@@ -420,7 +423,9 @@ def chart(country, genre):
         if len(ids) >= 25:
             return ids
     except Exception as e:
-        log(f"{country.upper()} chart page {genre}: {e}")
+        log(f"{country.upper()} {platform} chart page {genre}: {e}")
+    if platform != "iphone":
+        return []
     d = json.loads(fetch(f"https://itunes.apple.com/{country}/rss/topfreeapplications/limit=100/genre={genre}/json"))
     entries = d.get("feed", {}).get("entry", [])
     if isinstance(entries, dict):
@@ -931,18 +936,22 @@ def run_job(discover=True, only_country=None, keyword_ids=None, hourly=False):
             if hourly:  # f run dyal kol sa3a, categories mn akher app info
                 own = own_info(cc)
                 cc_genres = ["6014"] + [g for g in (own.get("genre_ids") or []) if g.startswith("70")]
-            for g in list(dict.fromkeys(cc_genres))[:3]:
-                try:
-                    ids = chart(cc, g)
-                    rank = ids.index(app_id) + 1 if app_id in ids else None
-                    with db() as con:
-                        con.execute("""INSERT INTO charts VALUES (?,?,?,?) ON CONFLICT(date, country, genre) DO UPDATE SET
-                                       rank = CASE WHEN charts.rank IS NULL THEN excluded.rank WHEN excluded.rank IS NULL THEN charts.rank
-                                       ELSE MIN(charts.rank, excluded.rank) END""", (d, cc, g, rank))
-                    if rank:
-                        log(f"🏆 {cc.upper()} top chart {GENRE_NAMES.get(g, g)}: #{rank}")
-                except Exception as e:
-                    log(f"{cc.upper()} chart {g}: {e}")
+            for platform in CHART_PLATFORMS:
+                for g in list(dict.fromkeys(cc_genres))[:3]:
+                    key = g if platform == "iphone" else f"{platform}:{g}"  # f table charts: "mac:7016", "ipad:6014"...
+                    try:
+                        ids = chart(cc, g, platform)
+                        if not ids:
+                            continue
+                        rank = ids.index(app_id) + 1 if app_id in ids else None
+                        with db() as con:
+                            con.execute("""INSERT INTO charts VALUES (?,?,?,?) ON CONFLICT(date, country, genre) DO UPDATE SET
+                                           rank = CASE WHEN charts.rank IS NULL THEN excluded.rank WHEN excluded.rank IS NULL THEN charts.rank
+                                           ELSE MIN(charts.rank, excluded.rank) END""", (d, cc, key, rank))
+                        if rank:
+                            log(f"🏆 {cc.upper()} {platform} top chart {GENRE_NAMES.get(g, g)}: #{rank}")
+                    except Exception as e:
+                        log(f"{cc.upper()} {platform} chart {g}: {e}")
             STATUS["done"] += 3
 
         # 3. keywords li kantba3o
